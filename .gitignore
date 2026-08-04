@@ -6,3 +6,7 @@ node_modules/
 .convex/
 Plans/
 .next/
+.playwright-mcp/
+__pycache__/
+*.pyc
+.venv/

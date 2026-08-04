@@ -12,7 +12,7 @@ Do Real Work). Licensed under **[Apache 2.0](./LICENSE)**.
 | Directory | What it is |
 |---|---|
 | `convex/` | The Liner Notes Convex deployment: schema (resolved catalog, steward records, influence graph, playlists) + judge-mode seed |
-| `connector/` | Convex → DataHub ingestion source, Python (MOO-460, in progress) |
+| `connector/` | Convex → DataHub ingestion source, Python — see [connector/README.md](./connector/README.md) |
 | `agent/` | The steward agent, TypeScript (Milestone 2) |
 | `web/` | The listener discovery app, Next.js (Milestone 4) |
 | `scripts/` | `verify-source.mjs` — read-only smoke test against the source deployment |
