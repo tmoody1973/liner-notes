@@ -1,0 +1,58 @@
+# Liner Notes
+
+Radio Milwaukee's four stations' airplay history, turned into an explorable,
+DataHub-governed artist-influence knowledge graph — by an autonomous steward
+agent that shows its receipts.
+
+Built for **Build with DataHub: The Agent Hackathon** (Track 1 — Agents That
+Do Real Work). Licensed under **[Apache 2.0](./LICENSE)**.
+
+## What's here
+
+| Directory | What it is |
+|---|---|
+| `convex/` | The Liner Notes Convex deployment: schema (resolved catalog, steward records, influence graph, playlists) + judge-mode seed |
+| `connector/` | Convex → DataHub ingestion source, Python (MOO-460, in progress) |
+| `agent/` | The steward agent, TypeScript (Milestone 2) |
+| `web/` | The listener discovery app, Next.js (Milestone 4) |
+| `scripts/` | `verify-source.mjs` — read-only smoke test against the source deployment |
+
+## Setup
+
+```sh
+npm install
+cp .env.example .env.local        # fill in what you have (see below)
+cd convex && npx convex dev --once  # creates/links your Convex deployment, pushes schema
+cd ..
+```
+
+### Judge mode (no private data required)
+
+The repo runs without Radio Milwaukee's private airplay data. One command
+seeds your Convex deployment with an anonymized sample dataset — real artist
+names (so entity resolution genuinely works), synthetic play history across
+the four real stations, deliberately messy artist strings included:
+
+```sh
+npm run seed
+```
+
+Then open the Convex dashboard (`npx convex dashboard` from `convex/`) and
+browse `sourcePlays`, `sourceStations`, `sourceEvents`.
+
+### Real mode (Radio Milwaukee source data)
+
+Set `CONVEX_SOURCE_URL` and `CONVEX_SOURCE_DEPLOY_KEY` in `.env.local`
+(read-only deploy key, scope `deployment:data:view`), then prove the
+connection:
+
+```sh
+npm run verify:source
+# Source deployment reachable. 18 tables: ...
+# plays: 5120+ rows (stopped after 5 pages; more exist).
+```
+
+## Credentials
+
+Every credential the project uses is documented in [.env.example](./.env.example).
+Nothing is required for judge mode except a free Convex account.

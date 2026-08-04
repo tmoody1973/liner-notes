@@ -1,0 +1,14 @@
+{
+  "name": "@liner-notes/convex",
+  "private": true,
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "convex dev",
+    "push": "convex dev --once",
+    "seed": "convex run seed:run"
+  },
+  "dependencies": {
+    "convex": "^1.31.0"
+  }
+}

@@ -3,3 +3,6 @@
 .env*.local
 .remember/
 node_modules/
+.convex/
+Plans/
+.next/

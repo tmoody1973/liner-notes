@@ -1,0 +1,16 @@
+{
+  "name": "liner-notes",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Radio Milwaukee's airplay history as a DataHub-governed artist-influence knowledge graph, with provenance receipts on every connection.",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "convex",
+    "agent",
+    "web"
+  ],
+  "scripts": {
+    "seed": "npm --workspace convex run seed",
+    "verify:source": "node scripts/verify-source.mjs"
+  }
+}
