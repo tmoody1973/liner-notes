@@ -169,5 +169,16 @@ export default defineSchema({
     traversal: v.string(),
     trackIds: v.array(v.id("tracks")),
     createdAt: v.number(),
+    // Per-track provenance: which hop selected this artist ("why this track").
+    why: v.optional(
+      v.array(
+        v.object({
+          artistId: v.id("artists"),
+          viaArtistId: v.optional(v.id("artists")),
+          weight: v.optional(v.number()),
+          type: v.optional(v.string()),
+        })
+      )
+    ),
   }),
 });

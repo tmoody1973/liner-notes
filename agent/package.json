@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "session": "tsx src/index.ts",
-    "check": "tsx src/resolve.selfcheck.ts && tsx src/graph/coplay.selfcheck.ts",
+    "check": "tsx src/resolve.selfcheck.ts && tsx src/graph/coplay.selfcheck.ts && tsx ../web/lib/traversal.selfcheck.ts",
     "typecheck": "tsc --noEmit",
     "graph": "tsx src/graph/build.ts",
-    "graph:verify": "tsx src/graph/verify.ts"
+    "graph:verify": "tsx src/graph/verify.ts",
+    "backfill:links": "tsx src/backfill-links.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",

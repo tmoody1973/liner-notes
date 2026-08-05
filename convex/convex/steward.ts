@@ -499,6 +499,52 @@ export const enrichArtist = mutation({
   },
 });
 
+// All tracks with their artist's display name — the streaming-links/preview
+// backfill worklist (MOO-471). ~363 rows + one get per row, well in bounds.
+export const tracksForBackfill = query({
+  args: {},
+  handler: async (ctx) => {
+    const tracks = await ctx.db.query("tracks").collect();
+    const result = [];
+    for (const track of tracks) {
+      const artist = await ctx.db.get(track.artistId);
+      result.push({
+        _id: track._id,
+        title: track.title,
+        artistName: artist?.displayName ?? "",
+        isrc: track.isrc,
+        previewUrl: track.previewUrl,
+        streamingLinks: track.streamingLinks ?? {},
+      });
+    }
+    return result;
+  },
+});
+
+// Backfill writes: merge streaming links, set preview/ISRC when discovered.
+export const setTrackMedia = mutation({
+  args: {
+    trackId: v.id("tracks"),
+    isrc: v.optional(v.string()),
+    previewUrl: v.optional(v.string()),
+    streamingLinks: v.optional(v.record(v.string(), v.string())),
+  },
+  handler: async (ctx, { trackId, ...fields }) => {
+    const track = await ctx.db.get(trackId);
+    if (!track) return;
+    const patch: Record<string, unknown> = {};
+    if (fields.isrc && !track.isrc) patch.isrc = fields.isrc;
+    if (fields.previewUrl) patch.previewUrl = fields.previewUrl;
+    if (fields.streamingLinks) {
+      patch.streamingLinks = {
+        ...(track.streamingLinks ?? {}),
+        ...fields.streamingLinks,
+      };
+    }
+    if (Object.keys(patch).length > 0) await ctx.db.patch(trackId, patch);
+  },
+});
+
 export const markItem = mutation({
   args: {
     id: v.id("workItems"),

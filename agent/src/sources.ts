@@ -165,3 +165,64 @@ export async function deezerSearchArtist(
   const top = data.data?.[0];
   return top ? { id: String(top.id), name: top.name, imageUrl: top.picture_xl } : null;
 }
+
+// ── Deezer track lookups (MOO-471 backfill: previews + deezer links) ────────
+
+export interface DeezerTrack {
+  id: string;
+  title: string;
+  artistName: string;
+  isrc?: string;
+  link: string; // deezer.com track page
+  previewUrl?: string; // 30-second MP3
+}
+
+interface DeezerTrackResponse {
+  id?: number;
+  title?: string;
+  isrc?: string;
+  link?: string;
+  preview?: string;
+  artist?: { name?: string };
+  error?: unknown;
+}
+
+function toDeezerTrack(t: DeezerTrackResponse): DeezerTrack | null {
+  if (!t.id || !t.link) return null;
+  return {
+    id: String(t.id),
+    title: t.title ?? "",
+    artistName: t.artist?.name ?? "",
+    isrc: t.isrc || undefined,
+    link: t.link,
+    previewUrl: t.preview || undefined,
+  };
+}
+
+export async function deezerTrackByIsrc(isrc: string): Promise<DeezerTrack | null> {
+  const data = await politeFetchJson<DeezerTrackResponse>(
+    `https://api.deezer.com/track/isrc:${encodeURIComponent(isrc)}`,
+    { minIntervalMs: DEEZER_INTERVAL, cacheKey: `deezer:isrc:${isrc}` }
+  );
+  return data.error ? null : toDeezerTrack(data);
+}
+
+interface DeezerTrackSearchResponse {
+  data?: DeezerTrackResponse[];
+}
+
+export async function deezerSearchTrack(
+  artistName: string,
+  title: string
+): Promise<DeezerTrack | null> {
+  const q = `artist:"${artistName}" track:"${title}"`;
+  const data = await politeFetchJson<DeezerTrackSearchResponse>(
+    `https://api.deezer.com/search/track?q=${encodeURIComponent(q)}&limit=3`,
+    {
+      minIntervalMs: DEEZER_INTERVAL,
+      cacheKey: `deezer:tracksearch:${artistName.toLowerCase()}|${title.toLowerCase()}`,
+    }
+  );
+  const top = data.data?.[0];
+  return top ? toDeezerTrack(top) : null;
+}

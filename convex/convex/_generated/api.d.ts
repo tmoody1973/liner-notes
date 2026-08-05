@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as app from "../app.js";
 import type * as graph from "../graph.js";
+import type * as playlists from "../playlists.js";
 import type * as seed from "../seed.js";
 import type * as steward from "../steward.js";
 
@@ -19,7 +21,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  app: typeof app;
   graph: typeof graph;
+  playlists: typeof playlists;
   seed: typeof seed;
   steward: typeof steward;
 }>;
