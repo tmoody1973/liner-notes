@@ -123,6 +123,29 @@ export const edgeBetween = query({
   },
 });
 
+// Per-neighborhood anchor artists (top spins) — M3 eyeball verification now,
+// M4 neighborhood cards later.
+export const neighborhoodAnchors = query({
+  args: {},
+  handler: async (ctx) => {
+    const hoods = await ctx.db.query("neighborhoods").collect();
+    const nodes = await ctx.db.query("graphNodes").collect();
+    const result = [];
+    for (const hood of hoods) {
+      const members = nodes
+        .filter((n) => n.neighborhoodId === hood._id)
+        .sort((a, b) => b.spinCount - a.spinCount);
+      const anchors = [];
+      for (const node of members.slice(0, 5)) {
+        const artist = await ctx.db.get(node.artistId);
+        anchors.push({ name: artist?.displayName ?? "?", spins: node.spinCount });
+      }
+      result.push({ name: hood.name, size: members.length, anchors });
+    }
+    return result;
+  },
+});
+
 // Counts for build-summary verification (independent of the builder's math).
 export const graphStats = query({
   args: {},
