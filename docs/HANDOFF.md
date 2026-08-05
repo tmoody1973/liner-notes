@@ -1,47 +1,36 @@
 # Handoff — Liner Notes (DataHub Agent Hackathon)
 
-**For the next session:** planning is 100% complete; nothing is built and nothing is committed to git yet. Your job is to start building, issue by issue, with Linear as the record of truth.
+**Updated 2026-08-04 ~19:15 CDT.** M1 complete, M2 one-third done. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1). Next action: **build MOO-462**.
 
-## What this project is
+## Where truth lives (read, don't re-derive)
 
-Liner Notes: an autonomous steward agent turns Radio Milwaukee's four-station airplay history (Convex) into a DataHub-governed artist-influence knowledge graph, with a listener discovery app showing provenance "receipts" on every connection. Built for **Build with DataHub: The Agent Hackathon** (Devpost, deadline **Aug 10, 2026 5pm EDT**), Track 1. Based on the HDSR "Stell-R" paper — read `docs/research/stell-r-artist-influence-hdsr.md` (Appendix A has the traversal-algorithm pseudocode to port).
+- **Locked scope/PRD:** `_build_plan/prd.html` · **Research:** `docs/research/stell-r-artist-influence-hdsr.md` (Appendix A = traversal pseudocode for M3/M4)
+- **Linear (record of truth):** project "Liner Notes — DataHub Agent Hackathon", team Moodyco, issues MOO-459→474. Done: **459, 460, 461** (each closed with a real-evidence comment worth reading). In progress: nothing. Next: **MOO-462** (resolution+enrichment), then 463 (review UI), 464 (DataHub write-back) closes M2.
+- **M1 log:** `_build_plan/milestones/1-foundation-connector/milestone-log.md` (decisions + env gotchas). M2 log gets written when 461–464 are all done (per `_build_plan/milestones/2-steward-agent/prompt.md`).
+- **Workflow:** `linear-build:linear-build` skill per issue (align → In Progress → plan mode → build → verify against real data → Done with evidence). Suggested next-session skills: `linear-build:linear-build`, `claude-api` (before touching agent LLM code), `superpowers:verification-before-completion`.
 
-## Where truth lives (do not re-derive; read these)
+## Running state (live right now on this machine)
 
-- **Locked scope / PRD:** `_build_plan/prd.html` (features, cuts, data model, integrations, 5 milestones)
-- **Linear project (record of truth):** https://linear.app/moodyco/project/liner-notes-datahub-agent-hackathon-95fae68e8506 — issues **MOO-459 → MOO-474**, full spec contracts (Intent/Acceptance/Verification/Out-of-scope), dependency-chained. Team: Moodyco.
-- **Milestone plan-mode triggers:** `_build_plan/milestones/{1..5}-*/prompt.md` (each build writes a `milestone-log.md` beside it)
-- **Repo instructions:** `AGENTS.md`
+- **DataHub quickstart is running** in Docker (GMS :8080 healthy, UI :9002, login datahub/datahub). Both Convex deployments ingested: 30 datasets under containers `rm-playlist-v2` (18) + `liner-notes` (12). If Docker restarts: `connector/.venv/bin/datahub docker quickstart` (may need one rerun after a MySQL healthcheck race).
+- **Convex:** liner-notes deployment `dev:dusty-crocodile-663` (client config in `convex/.env.local`). Source = rm-playlist-v2 **dev** `precise-fish-444` — **prod is empty**, dev holds the real data (166k+ plays). Keys in root `.env.local` (gitignored; values quoted — they contain `|`).
+- **Steward work queue:** `workItems` has 1,055 rows, **all status "deferred"** from the MOO-461 chassis runs. MOO-462's resolver should process `pending` items — decide whether to reset deferred→pending (add a small mutation) or treat deferred as the resolver's intake. `stewardRuns` has 5 run records with Claude-written reports.
 
-## ⚠️ Three prerequisites before Milestone 1 (Tarik must provide)
+## Env & tooling gotchas (hard-won)
 
-1. **Deploy key for rm-playlist-v2** — Convex dashboard → project `rm-playlist-v2` → Settings → Deploy key. Goes in `.env.local` (never committed). This is the read-only door to the source data.
-2. **Discogs personal access token** — free, ~2 min at discogs.com developer settings.
-3. **Anthropic + Perplexity API keys** on hand (Anthropic needed from M2; Perplexity not until M5/MOO-472).
+- Root `.env.local`: `CONVEX_SOURCE_URL`, `CONVEX_SOURCE_DEPLOY_KEY` (scope data:view), `CONVEX_LINER_NOTES_DEPLOY_KEY`, `ANTHROPIC_API_KEY`, `DISCOGS_TOKEN` (+KEY/SECRET), `PERPLEXITY_API_KEY`. All verified working 2026-08-04.
+- Python 3.14 is system default — too new for acryl-datahub; connector venv is `connector/.venv` (py3.11 via uv). `uvx` available (agent spawns `uvx mcp-server-datahub`).
+- Plain `npx convex dev --once` from `convex/` silently targets an anonymous LOCAL deployment — always confirm `convex/.env.local` says `dev:dusty-crocodile-663` after configure.
+- Disk was at 100% earlier today (corrupted Docker VM, since reset). ~35-48GB free now. **~92GB of node_modules/.venv junk in `~/Documents/Projects` still reclaimable** — bulk `rm -rf` was permission-blocked for the agent; Tarik can run the find command (in scrollback / re-derive: find node_modules,.next,.venv,venv,__pycache__,.turbo dirs, rm -rf).
+- **Odesli public API is dead (410 since Aug 1).** Allowlist application submitted. Fallback plan A/B/C recorded as a comment on MOO-471 (song.link URL construction from appleMusicSongId; SonoVault; allowlist).
 
-## Context not captured in the PRD/Linear (hard-won this session)
+## MOO-462 implementation notes (what the chassis already gives you)
 
-- **Source deployment:** rm-playlist-v2 prod = `reliable-gerbil-906` (team `tarikjmoody-gmail-com`, Convex team id 106284). Public repo mirror: `tmoody1973/rm-playlist-v2` on GitHub; schema at `packages/convex/convex/schema.ts`. Key tables: `plays` (artistRaw/titleRaw, playedAt, stationId, `enrichmentStatus` = the agent's real backlog), `artists`/`tracks` (partial canonical catalog, some mbid/isrc/previewUrl), `events`+`eventArtists`+`touringFromRotation` (Ticketmaster/AXS, powers M5 see-them-live).
-- **Convex CLI gotcha:** `npx convex data --deployment-name X` from outside a linked project fails with a 401 (token not attached) even though the login token in `~/.convex/config.json` works via curl against `api.convex.dev`. Don't fight it — the connector uses Convex's **streaming export REST API** (`/api/json_schemas`, `/api/list_snapshot`, `/api/document_deltas`) with the deploy key, which is also how schema discovery works.
-- **Steward agent writes ONLY to the new Liner Notes deployment** (created in MOO-459). rm-playlist-v2 is read-only — locked decision, prod safety.
-- **No audio features anywhere** (Spotify API deprecated; AcousticBrainz dead). Coherence filter = tag/genre-vector similarity. Deliberate adaptation from the paper — say so in docs/video.
-- **Judge mode is a submission requirement detail:** repo must run without private radio data → anonymized sample dataset seeds the Liner Notes deployment (in MOO-459's acceptance criteria).
-- **DataHub judging tell:** write-back ("contributions back to the metadata graph") is weighted highest; the connector doubles as the OSS-contribution bonus. MCP Server is their preferred agent integration — the agent's Orient phase must visibly read from it.
-- Odesli for streaming links (no OAuth); JamBase/browser-use explicitly rejected (post-hackathon notes only).
+- Swap the defer handler in `agent/src/session.ts` (marked `ponytail:` comment) with real resolution. Plumbing that exists: `agent/src/polite.ts` (politeFetchJson: per-host spacing, backoff, file cache — REQUIRED for MusicBrainz 1 req/s), `agent/src/convex.ts` (LinerNotesClient wrapping `convex/convex/steward.ts` functions), `agent/src/report.ts` (Claude claude-opus-5 pattern with refusal fallback — reuse for LLM adjudication).
+- Convex `artists` table (schema.ts) has the resolution record shape: `{method, confidence, evidence, runId}` + rawNames[] — designed for the three buckets (auto-apply / LLM-adjudicated / human review). `reviewItems` table ready for the review bucket (MOO-463 renders it).
+- MusicBrainz: no key, polite UA string required (e.g. `LinerNotes/0.1 (tarik@radiomilwaukee.org)`), 1 req/s. Discogs token in env. Deezer public.
+- Real sample messiness to design against: "414Music.FM" (station name as artist, 80 plays — should hit the ignore path or review), casing variants, "feat." strings.
+- Judge mode (`--mode=judge`) must keep working — its 91 sample items resolve against real MusicBrainz.
 
-## How to start
+## Standing decisions (do not reopen)
 
-1. Confirm the three prerequisites are in `.env.local`.
-2. Make the initial git commit (user hasn't asked for it yet this session — confirm, then commit `_build_plan/`, `docs/`, `AGENTS.md`).
-3. Say **"build MOO-459"** → the `linear-build:linear-build` skill runs the loop: read issue → align → In Progress → build to acceptance criteria → verify against real data → Done with evidence comment. Pair with `_build_plan/milestones/1-foundation-connector/prompt.md` for plan mode.
-
-## Suggested skills for next session
-
-- `linear-build:linear-build` — the build loop per issue (primary workflow)
-- `superpowers:writing-plans` / plan mode via the milestone prompt.md files
-- `superpowers:verification-before-completion` — every issue's verification checklist demands real evidence
-- `vercel:nextjs` (M4) and `claude-api` (M2 agent implementation) when those milestones arrive
-
-## Session decisions log (chronology, for the curious)
-
-Brainstormed via superpowers:brainstorming → concept pivoted twice on user direction: (1) listener-first product grounded in the Stell-R paper, (2) editorial edges from established music journalism via Perplexity (not Radio Milwaukee's own content, not scraping). PRD created interactively via bm-prd-creator (all 10 features + 9 cuts individually locked). Linear project + 16 issues created via linear-build. All scope questions are settled — don't reopen them; if something new arises, it's a Linear issue conversation, not a scope re-litigation.
+Source is read-only (enforced by key scope). Steward writes only to liner-notes deployment. No audio features (tag/genre similarity instead). Scope questions are settled — new ideas become Linear issue comments, not scope changes. `_build_plan/` is temporary docs, never imported by code.
