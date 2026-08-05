@@ -280,6 +280,54 @@ export const dedupeReviewItems = mutation({
   },
 });
 
+// Bulk-resolve 414music-only review items as local artists (Tarik's call,
+// 2026-08-05): the station's direct uploads aren't on MusicBrainz by design,
+// so they become first-class artists without an MBID instead of clogging the
+// human review queue. genres: [] marks enrichment intentionally complete,
+// mirroring the standing 414music enrichment skip.
+export const resolveLocalArtists = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const pending = await ctx.db
+      .query("reviewItems")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    let resolved = 0;
+    let skipped = 0;
+    for (const review of pending) {
+      const workItem = await ctx.db
+        .query("workItems")
+        .withIndex("by_rawArtist", (q) => q.eq("rawArtist", review.rawArtist))
+        .unique();
+      const only414 =
+        workItem !== null &&
+        workItem.stationSlugs.length > 0 &&
+        workItem.stationSlugs.every((s) => s === "414music");
+      if (!only414) {
+        skipped += 1;
+        continue;
+      }
+      await ctx.db.insert("artists", {
+        displayName: review.rawArtist,
+        rawNames: [review.rawArtist],
+        genres: [],
+        resolution: {
+          method: "human",
+          confidence: 1,
+          evidence:
+            "Bulk human decision (Tarik, 2026-08-05): 414 Music-only artist — " +
+            "direct local upload, not on MusicBrainz by design",
+          resolvedAt: Date.now(),
+        },
+      });
+      await ctx.db.patch(review._id, { status: "approved" });
+      await ctx.db.patch(workItem._id, { status: "resolved", updatedAt: Date.now() });
+      resolved += 1;
+    }
+    return { resolved, skipped };
+  },
+});
+
 // ── Review page (MOO-463) ────────────────────────────────────────────────
 
 // Pending review items joined with their work-item context for the card UI.
