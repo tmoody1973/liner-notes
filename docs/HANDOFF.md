@@ -1,11 +1,11 @@
 # Handoff — Liner Notes (DataHub Agent Hackathon)
 
-**Updated 2026-08-05 ~05:50 CDT.** M1 done, M2 two-thirds done (461+462 closed). Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1) — Tarik manages deadline pressure; don't cut corners to save time. Next action: **build MOO-463** (review page UI).
+**Updated 2026-08-05 ~05:50 CDT.** M1 done; M2 needs only MOO-464 (461/462/463 closed). Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1) — Tarik manages deadline pressure; don't cut corners to save time. Next action: **build MOO-464** (DataHub write-back) — set up the Linode 8GB VM first (linode-cli installed AND authenticated).
 
 ## Where truth lives (read, don't re-derive)
 
 - **Locked scope/PRD:** `_build_plan/prd.html` · **Research:** `docs/research/stell-r-artist-influence-hdsr.md` (Appendix A = traversal pseudocode for M3/M4)
-- **Linear (record of truth):** project "Liner Notes — DataHub Agent Hackathon", team Moodyco, MOO-459→474. Done: **459, 460, 461, 462** (each closed with a real-evidence comment worth reading — 462's includes the false-positive story). Next: **MOO-463** (review UI, `reviewItems` has 71 pending rows w/ candidates + adjudicatorNote), then 464 (DataHub write-back) closes M2.
+- **Linear (record of truth):** project "Liner Notes — DataHub Agent Hackathon", team Moodyco, MOO-459→474. Done: **459, 460, 461, 462** (each closed with a real-evidence comment worth reading — 462's includes the false-positive story). Next: **MOO-464** (DataHub write-back) closes M2 — then write `_build_plan/milestones/2-steward-agent/milestone-log.md` per that folder's prompt.md.
 - **Workflow:** `linear-build:linear-build` skill per issue (align → In Progress → plan mode → build → verify against real data → Done with evidence). Load `claude-api` before touching agent LLM code.
 
 ## Running state (live right now)
@@ -17,7 +17,7 @@
 ## MOO-462 outcomes the next issues build on
 
 - **Resolution pipeline** (`agent/src/resolve.ts`, `sources.ts`, `adjudicate.ts`, `enrich.ts`, `sonovault.ts`): score = name-sim + MB score + Discogs/Deezer cross-check + station-genre coherence + era. Buckets: ≥0.85 + name≥0.85 + **positive genre-or-era corroboration** → auto; 0.55–0.85 → Claude (claude-opus-5, structured verdict, reasoning persisted); else review. Name-only matches NEVER auto-apply (hand-check found a Virginia screamo band matched for local act "Dialogues" — see MOO-462 comment).
-- **MOO-463 ready-made pieces:** `reviewItems` rows carry scored candidates + `adjudicatorNote`; `steward:retractResolution` mutation = the reject flow; approve flow should call `applyResolution` with method "human".
+- **Review page shipped (MOO-463):** `web/app/review/page.tsx` at `/review` (`npm run dev` in web/; needs `web/.env.local` NEXT_PUBLIC_CONVEX_URL). Mutations: `steward:pendingReviews/approveReview/rejectReview`. Real decisions made: Ellie Jackson approved (method "human"), Dialogues rejected (workItem ignored). SonoVault key is LIVE in root .env.local (Starter, 50k/mo) — enrichment writes tracks.streamingLinks now.
 - **Standing rule from Tarik: 414music-only artists skip external enrichment** (direct local uploads, not on streaming platforms). Ignore patterns catch station branding ("414Music.FM" → ignored).
 - **Streaming links (MOO-471): SonoVault is plan A** (Tarik's call; full eval + API docs notes in MOO-471 comments). Client wired in `agent/src/sonovault.ts`, dormant until **Tarik creates the account** (sonovault.now/signup, free) and adds `SONOVAULT_API_KEY` to root `.env.local`. Fallbacks: song.link URL from appleMusicSongId, then search links. Deezer links come from Deezer's own ISRC lookup, not SonoVault.
 - **DataHub skills installed** (`.agents/skills/`, symlinked for Claude Code): datahub-search/enrich/lineage/quality + connector-review-vs-22-standards — use for MOO-464 and the upstream connector PR. `.agents/`, `.claude/`, `skills-lock.json` are untracked; decide at M5 whether to gitignore.
