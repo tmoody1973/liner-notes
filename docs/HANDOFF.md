@@ -1,12 +1,19 @@
-# Handoff — Liner Notes (DataHub Agent Hackathon) → next: M2 milestone log, then M3
+# Handoff — Liner Notes (DataHub Agent Hackathon) → next: M4 (discovery app)
 
-**Updated 2026-08-05 ~07:00 CDT.** **M2 is COMPLETE** — MOO-459/460/461/462/463/464 all Done with evidence comments. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1) — Tarik manages deadline pressure; do the job properly, don't cut corners to save time.
+**Updated 2026-08-05 ~08:20 CDT.** **M1, M2, AND M3 are COMPLETE** — MOO-459…466 all Done with evidence comments; milestone logs written for all three. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1) — Tarik manages deadline pressure; do the job properly, don't cut corners to save time.
 
 ## Next actions (in order)
 
-1. **M2 milestone log:** write `_build_plan/milestones/2-steward-agent/milestone-log.md` per that folder's `prompt.md` (starts with "## What's new in the app" for non-technical readers).
-2. **M3 (graph build):** `artists.mbRelations` is already populated for canonical edges; curation edges from co-play per the Stell-R method in `docs/research/stell-r-artist-influence-hdsr.md` Appendix A.
-3. Workflow stays `linear-build:linear-build` (align → In Progress → build → verify vs real data → Done + evidence comment). Load `claude-api` before touching agent LLM code.
+1. **M4 (discovery app):** MOO-467 (app shell + search + graph explorer), MOO-468 (pathfinder + playlists), MOO-469 (receipts + trust chips), MOO-470 (neighborhood map + bridges), MOO-471 (streaming links — SonoVault backfill/Deezer/UI buttons). Read `_build_plan/milestones/4-discovery-app/prompt.md` first (plan mode + Tarik's confirmation, per pattern). Stell-R traversal algorithms (K-BFS, Dijkstra with `1/(w+1)`, max-flow, intersections) are in the research doc's Appendix A.
+2. Workflow stays `linear-build:linear-build` (align → In Progress → build → verify vs real data → Done + evidence comment). Load `claude-api` before touching agent LLM code.
+
+## M3 graph (done — what M4 consumes)
+
+- `npm run graph -- --mode=real` rebuilds in ~4 min: currently 360 nodes, ~23.2k receipted edges (weight = co-play count in 60-min windows per station; ≥2 floor), 2 canonical edges, 3 neighborhoods, bridge scores. Deterministic; rerun after drain progress.
+- **Neighborhoods (Claude-named, regenerate same-spirit not verbatim — don't rebuild between demo rehearsal and recording):** Riverwest Basement Circuit (local/414), Bronzeville Groove Society (neo-soul), North Avenue Soul Bridge (contemporary R&B). Top bridges: Kia Rap Princess, B Free, Amanda Huff, Dana Coppafeel, Troy Tyler.
+- Ready-made Convex queries for M4: `graph:edgeBetween` (receipts panel), `graph:neighborhoodAnchors` (hood cards), `graph:graphStats`. Graph is dense — filter explorer rendering by weight (≥5) or top-N per node.
+- `npm run graph:verify` = independent edge recount + MusicBrainz checks. `npm run check` runs resolver + coplay self-checks.
+- Convex graph mutations are chunked (4096-read limit bit us once — clearGraph loops client-side).
 
 ## DataHub on Linode (LIVE — this is the workspace instance)
 
