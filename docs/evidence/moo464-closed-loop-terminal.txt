@@ -1,0 +1,26 @@
+MOO-464 closed-loop evidence — terminal excerpts (2026-08-05 CDT)
+
+=== Session N (run kh71p88pj9weccryvj53zjay2s8bwv8p, --max-items=25) ===
+--- Orient (reads state written by the smoke/previous write) ---
+  assertion state: 3 assertions from the previous session — Resolution coverage: FAILURE (coveragePct=15.0 resolvedWorkItems=158 thresholdPct=50 totalWorkItems=1055) as of 6m ago; Duplicate review rows: SUCCESS (duplicatePendingReviewRows=0) as of 6m ago; Enrichment coverage: FAILURE (resolvedArtists=123 enrichedArtists=31 coveragePct=25.2 thresholdPct=80) as of 6m ago
+--- Write-back at session end ---
+  writing the session's work back into DataHub...
+    assertion FAIL · Resolution coverage (resolvedWorkItems=165 totalWorkItems=1055 coveragePct=15.6 thresholdPct=50)
+    assertion PASS · Duplicate review rows (duplicatePendingReviewRows=0)
+    assertion PASS · Enrichment coverage (enrichedArtists=130 resolvedArtists=130 coveragePct=100.0 thresholdPct=80)
+    lineage upserted: rm-playlist-v2.plays → artists, tracks, workItems
+    run report + descriptions written on: rm-playlist-v2.plays, liner-notes.artists, liner-notes.tracks, liner-notes.workItems
+    steward registered as technical owner on 31 datasets
+
+=== Session N+1 (--max-items=1) ===
+--- Orient: QUOTES SESSION N'S ASSERTION STATE (the closed loop) ---
+  assertion state: 3 assertions from the previous session — Resolution coverage: FAILURE (coveragePct=15.6 resolvedWorkItems=165 thresholdPct=50 totalWorkItems=1055) as of 1m ago; Duplicate review rows: SUCCESS (duplicatePendingReviewRows=0) as of 1m ago; Enrichment coverage: SUCCESS (resolvedArtists=130 enrichedArtists=130 coveragePct=100.0 thresholdPct=80) as of 1m ago
+--- Its own write-back refresh ---
+    assertion FAIL · Resolution coverage (resolvedWorkItems=166 totalWorkItems=1055 coveragePct=15.7 thresholdPct=50)
+    assertion PASS · Duplicate review rows (duplicatePendingReviewRows=0)
+    assertion PASS · Enrichment coverage (enrichedArtists=131 resolvedArtists=131 coveragePct=100.0 thresholdPct=80)
+
+=== Independent Convex count (steward:datahubStats, run after session N+1) ===
+{ artists: { enriched: 131, resolved: 131, total: 131 }, duplicateReviewRows: 0,
+  workItems: { ignored: 2, pending: 733, resolved: 166, review: 154, total: 1055 } }
+Matches assertion values: resolvedWorkItems=166/totalWorkItems=1055, duplicates=0, enriched=131/131.
