@@ -66,7 +66,10 @@ export async function nameNeighborhoods(
         ? { name: match.name, description: match.description }
         : deterministicName(h);
     });
-  } catch {
+  } catch (error) {
+    console.warn(
+      `  naming fell back to deterministic names: ${(error as Error).message.slice(0, 200)}`
+    );
     return fallback;
   }
 }
