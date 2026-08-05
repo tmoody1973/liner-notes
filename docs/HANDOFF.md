@@ -1,6 +1,6 @@
 # Handoff — Liner Notes (DataHub Agent Hackathon) → next: M4 (discovery app)
 
-**Updated 2026-08-05 ~08:20 CDT.** **M1, M2, AND M3 are COMPLETE** — MOO-459…466 all Done with evidence comments; milestone logs written for all three. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1) — Tarik manages deadline pressure; do the job properly, don't cut corners to save time.
+**Updated 2026-08-05 ~14:45 CDT.** **M1, M2, AND M3 are COMPLETE** — MOO-459…466 all Done with evidence comments; milestone logs written for all three. **The full 1,055-item backlog is DRAINED** (0 pending; 672 resolved / 304 review / 79 ignored) and **all three DataHub assertions are GREEN** (resolution 63.7%, duplicates 0, enrichment 100% — `docs/evidence/moo464-assertions-all-green.png`, follow-up comment on MOO-464). No steward session needs to run again except for the demo itself. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1) — Tarik manages deadline pressure; do the job properly, don't cut corners to save time.
 
 ## Next actions (in order)
 
@@ -9,11 +9,11 @@
 
 ## M3 graph (done — what M4 consumes)
 
-- `npm run graph -- --mode=real` rebuilds in ~4 min: currently 360 nodes, ~23.2k receipted edges (weight = co-play count in 60-min windows per station; ≥2 floor), 2 canonical edges, 3 neighborhoods, bridge scores. Deterministic; rerun after drain progress.
-- **Neighborhoods (Claude-named, regenerate same-spirit not verbatim — don't rebuild between demo rehearsal and recording):** Riverwest Basement Circuit (local/414), Bronzeville Groove Society (neo-soul), North Avenue Soul Bridge (contemporary R&B). Top bridges: Kia Rap Princess, B Free, Amanda Huff, Dana Coppafeel, Troy Tyler.
-- Ready-made Convex queries for M4: `graph:edgeBetween` (receipts panel), `graph:neighborhoodAnchors` (hood cards), `graph:graphStats`. Graph is dense — filter explorer rendering by weight (≥5) or top-N per node.
+- **Current graph (built 09:11 CDT on the fully drained catalog):** 604 nodes, **39,609 receipted edges** (39,594 curation + **15 canonical**), 4 neighborhoods, bridge scores on every node. `npm run graph -- --mode=real` rebuilds in ~4 min; deterministic (weight = co-play count in 60-min windows per station; ≥2 floor real / ≥1 judge).
+- **Neighborhoods (Claude-named; regenerate same-spirit not verbatim — DON'T rebuild between demo rehearsal and recording):** Bronzeville Beat Loop (175, hip-hop/R&B), Riverwest Synth Blocks (282, DIY/local), Walker's Point Neo-Soul (66), Bay View Indie Row (63, indie rock). Top bridges: Twan Mack (1.0), Immortal Girlfriend, B Free, NILEXNILE, Shonn Hinton & Shotgun — all Milwaukee connectors.
+- Ready-made Convex queries for M4: `graph:edgeBetween(a,b)` (receipts panel), `graph:neighborhoodAnchors` (hood cards), `graph:graphStats` (paginated server-side; `LinerNotesClient.graphStats()` aggregates). Graph is dense — filter explorer rendering by weight (≥5) or top-N per node.
 - `npm run graph:verify` = independent edge recount + MusicBrainz checks. `npm run check` runs resolver + coplay self-checks.
-- Convex graph mutations are chunked (4096-read limit bit us once — clearGraph loops client-side).
+- **Convex scale limits bit twice — pattern to remember:** mutations cap at 4096 reads (clearGraph chunks + client loops) and queries cap at 32k docs (graphStats paginates). Any new M4 query touching graphEdges (~40k rows) must paginate or use `by_from`/`by_to` index ranges.
 
 ## DataHub on Linode (LIVE — this is the workspace instance)
 
@@ -34,9 +34,10 @@
 
 ## Current data/system state
 
-- **Full-backlog drain running** with write-back code since ~06:53 CDT (`/tmp/steward-drain-run2.log`, started from 733 pending of 1,055; ~1 item/min on low-play ambiguous strings → many hours; kill/restart safe, `npm run session -- --mode=real` resumes). It refreshes assertions at its end. The earlier 05:45 drain was SIGINT'd cleanly at 06:33 (old code, no write-back — that's why its report says "could not reach DataHub").
-- **Queue at 06:57:** pending 733 / resolved 166 / review 154 / ignored 2. **Review page `/review` has ~154 pending** — Tarik phone-triage anytime; human-approved rows make better demo material.
-- Resolution pipeline (MOO-462) unchanged: corroboration gate, `npm run check` runs the regression self-check.
+- **Drain COMPLETE (09:07 CDT, exit 0, all assertions green).** No steward session running; none needed except as demo footage. Run `npm run session -- --mode=real` anytime for fresh terminal footage — it's idempotent (worklist upserts; resolve loop finds 0 pending; write-back refreshes assertions with current numbers). Session logs from today: `/tmp/steward-session-N.log`, `-N1.log`, `/tmp/steward-drain-run3.log` (the one that finished).
+- **Queue end-state: 0 pending / 672 resolved / 304 review / 79 ignored of 1,055.** Review page `/review` has **~304 pending** — optional Tarik phone-triage (top-down by airplay); ~50 human decisions already recorded (incl. bulk 414music local-artist resolution of 70 via `steward:resolveLocalArtists`).
+- **Catalog: 613 artists, all enriched.** Local artists (no MBID) are first-class.
+- Resolution pipeline (MOO-462) unchanged: corroboration gate, `npm run check` runs the regression self-checks (resolver + coplay).
 - SonoVault (MOO-471 plan A): remaining work is backfill pre-key tracks, Deezer ISRC lookup, UI buttons (M4).
 - Convex: liner-notes `dev:dusty-crocodile-663`; source `precise-fish-444` read-only.
 - Standing rule: 414music-only artists skip external enrichment; station branding strings get ignored.
