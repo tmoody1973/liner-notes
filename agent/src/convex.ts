@@ -189,7 +189,8 @@ export class LinerNotesClient {
     return this.client.mutation(anyApi.graph.insertEdges, { items });
   }
 
-  graphStats(): Promise<{
+  // Paginated server-side (32k-docs-per-query limit); aggregated here.
+  async graphStats(): Promise<{
     nodes: number;
     edges: number;
     edgesByType: Record<string, number>;
@@ -197,7 +198,33 @@ export class LinerNotesClient {
     nodesWithBridgeScore: number;
     nodesWithNeighborhood: number;
   }> {
-    return this.client.query(anyApi.graph.graphStats, {});
+    const edgesByType: Record<string, number> = {};
+    let cursor: string | null = null;
+    for (;;) {
+      const page = (await this.client.query(anyApi.graph.graphStats, { cursor })) as {
+        edgesByType: Record<string, number>;
+        continueCursor: string | null;
+        done: boolean;
+        nodes?: number;
+        neighborhoods?: number;
+        nodesWithBridgeScore?: number;
+        nodesWithNeighborhood?: number;
+      };
+      for (const [type, count] of Object.entries(page.edgesByType)) {
+        edgesByType[type] = (edgesByType[type] ?? 0) + count;
+      }
+      if (page.done) {
+        return {
+          nodes: page.nodes ?? 0,
+          edges: Object.values(edgesByType).reduce((a, b) => a + b, 0),
+          edgesByType,
+          neighborhoods: page.neighborhoods ?? 0,
+          nodesWithBridgeScore: page.nodesWithBridgeScore ?? 0,
+          nodesWithNeighborhood: page.nodesWithNeighborhood ?? 0,
+        };
+      }
+      cursor = page.continueCursor;
+    }
   }
 
   judgePlays(): Promise<

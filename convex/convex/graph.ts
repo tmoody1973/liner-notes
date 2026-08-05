@@ -147,18 +147,26 @@ export const neighborhoodAnchors = query({
 });
 
 // Counts for build-summary verification (independent of the builder's math).
+// Paginated: a full graph's edges exceed Convex's 32k-documents-per-query
+// limit, so the client loops pages and aggregates edgesByType.
 export const graphStats = query({
-  args: {},
-  handler: async (ctx) => {
-    const nodes = await ctx.db.query("graphNodes").collect();
-    const edges = await ctx.db.query("graphEdges").collect();
-    const neighborhoods = await ctx.db.query("neighborhoods").collect();
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { cursor }) => {
+    const page = await ctx.db
+      .query("graphEdges")
+      .paginate({ cursor: cursor ?? null, numItems: 8000 });
     const edgesByType: Record<string, number> = {};
-    for (const e of edges) edgesByType[e.type] = (edgesByType[e.type] ?? 0) + 1;
+    for (const e of page.page) edgesByType[e.type] = (edgesByType[e.type] ?? 0) + 1;
+    if (!page.isDone) {
+      return { edgesByType, continueCursor: page.continueCursor, done: false };
+    }
+    const nodes = await ctx.db.query("graphNodes").collect();
+    const neighborhoods = await ctx.db.query("neighborhoods").collect();
     return {
-      nodes: nodes.length,
-      edges: edges.length,
       edgesByType,
+      continueCursor: null,
+      done: true,
+      nodes: nodes.length,
       neighborhoods: neighborhoods.length,
       nodesWithBridgeScore: nodes.filter((n) => n.bridgeScore !== undefined).length,
       nodesWithNeighborhood: nodes.filter((n) => n.neighborhoodId !== undefined).length,
