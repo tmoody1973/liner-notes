@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "seed": "npm --workspace convex run seed",
-    "verify:source": "node scripts/verify-source.mjs"
+    "verify:source": "node scripts/verify-source.mjs",
+    "steward": "npm --workspace agent run session --"
   }
 }

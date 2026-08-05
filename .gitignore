@@ -10,3 +10,4 @@ Plans/
 __pycache__/
 *.pyc
 .venv/
+.cache/

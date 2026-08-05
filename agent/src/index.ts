@@ -1,4 +1,13 @@
-// Liner Notes steward agent — built in Milestone 2 (MOO-461..464).
-// This stub only marks the package's home in the monorepo.
+// Copyright 2026 Radio Milwaukee / Liner Notes contributors
+// SPDX-License-Identifier: Apache-2.0
+import { loadEnv } from "./env.js";
+import { runSession } from "./session.js";
 
-console.log("Liner Notes steward agent: not yet implemented (Milestone 2).");
+loadEnv();
+
+const modeArg = process.argv.find((a) => a.startsWith("--mode="))?.split("=")[1];
+
+runSession(modeArg).catch((error) => {
+  console.error(`steward session failed: ${(error as Error).stack ?? error}`);
+  process.exit(1);
+});

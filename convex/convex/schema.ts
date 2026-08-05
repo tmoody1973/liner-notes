@@ -109,6 +109,19 @@ export default defineSchema({
     report: v.optional(v.string()),
   }),
 
+  // The agent's resumable work queue: one row per distinct raw artist string.
+  workItems: defineTable({
+    rawArtist: v.string(),
+    playCount: v.number(),
+    stationSlugs: v.array(v.string()),
+    status: v.string(), // "pending" | "deferred" | "resolved" | "review"
+    attempts: v.number(),
+    lastRunId: v.optional(v.id("stewardRuns")),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_rawArtist", ["rawArtist"]),
+
   // ── Influence graph ──────────────────────────────────────────────────
   graphNodes: defineTable({
     artistId: v.id("artists"),

@@ -13,7 +13,7 @@ Do Real Work). Licensed under **[Apache 2.0](./LICENSE)**.
 |---|---|
 | `convex/` | The Liner Notes Convex deployment: schema (resolved catalog, steward records, influence graph, playlists) + judge-mode seed |
 | `connector/` | Convex → DataHub ingestion source, Python — see [connector/README.md](./connector/README.md) |
-| `agent/` | The steward agent, TypeScript (Milestone 2) |
+| `agent/` | The steward agent, TypeScript — `npm run steward` runs a narrated session (orient via DataHub MCP → detect → resolve → enrich → document) |
 | `web/` | The listener discovery app, Next.js (Milestone 4) |
 | `scripts/` | `verify-source.mjs` — read-only smoke test against the source deployment |
 
@@ -51,6 +51,22 @@ npm run verify:source
 # Source deployment reachable. 18 tables: ...
 # plays: 5120+ rows (stopped after 5 pages; more exist).
 ```
+
+## Steward agent sessions
+
+With DataHub up (see `connector/README.md`) and the connector ingest run once:
+
+```sh
+npm run steward                  # real mode if source keys are set, else judge mode
+npm run steward -- --mode=judge  # force judge mode (sample data, no private keys)
+```
+
+Each session narrates five phases — **orient** (reads schemas, assertion state, and
+prior run reports from DataHub via the official MCP Server), **detect** (builds the
+prioritized worklist from unresolved plays), **resolve/enrich** (works the queue —
+one Convex mutation per item, so a killed session resumes without double-applying),
+and **document** (run record + a Claude-written report persisted to `stewardRuns`).
+Requires `uv` (for `uvx mcp-server-datahub`) and Node 20+.
 
 ## Credentials
 

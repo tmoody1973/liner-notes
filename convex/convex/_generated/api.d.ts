@@ -9,6 +9,7 @@
  */
 
 import type * as seed from "../seed.js";
+import type * as steward from "../steward.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +19,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   seed: typeof seed;
+  steward: typeof steward;
 }>;
 
 /**
