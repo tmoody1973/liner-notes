@@ -9,6 +9,8 @@
  */
 
 import type * as app from "../app.js";
+import type * as editorial from "../editorial.js";
+import type * as events from "../events.js";
 import type * as graph from "../graph.js";
 import type * as playlists from "../playlists.js";
 import type * as seed from "../seed.js";
@@ -22,6 +24,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   app: typeof app;
+  editorial: typeof editorial;
+  events: typeof events;
   graph: typeof graph;
   playlists: typeof playlists;
   seed: typeof seed;

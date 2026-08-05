@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { SearchBox } from "@/components/SearchBox";
+import { LiveSoonBadge, useLiveSoonIds } from "@/components/LiveSoon";
 import { hoodColor } from "@/lib/palette";
 import { stationLabel } from "@/lib/stations";
 import type { ArtistLite, Neighborhood } from "@/lib/types";
@@ -15,6 +16,7 @@ export default function Home() {
   const hoods = useQuery(anyApi.app.neighborhoodList) as
     | Neighborhood[]
     | undefined;
+  const liveSoon = useLiveSoonIds();
 
   const featured = useMemo(
     () =>
@@ -106,7 +108,10 @@ export default function Home() {
                 </div>
               )}
               <div className="p-3">
-                <p className="truncate font-medium">{a.displayName}</p>
+                <p className="flex items-center gap-1.5 truncate font-medium">
+                  <span className="truncate">{a.displayName}</span>
+                  <LiveSoonBadge show={liveSoon.has(a.artistId)} />
+                </p>
                 <p className="mt-0.5 truncate text-xs text-muted">
                   {a.spinCount} spins ·{" "}
                   {a.stations.map(stationLabel).join(", ")}

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PreviewButton } from "@/components/PreviewButton";
+import { LiveSoonBadge, useLiveSoonIds } from "@/components/LiveSoon";
 import { StreamingButtons } from "@/components/StreamingButtons";
 
 type PlaylistTrack = {
@@ -47,6 +48,7 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
     | null
     | undefined;
   const [busy, setBusy] = useState(false);
+  const liveSoon = useLiveSoonIds();
 
   const regenerate = async () => {
     if (!playlist?.seeds[0]) return;
@@ -152,7 +154,8 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
                   >
                     {track.artistName}
                   </Link>
-                  {track.neighborhood && <> · {track.neighborhood.name}</>}
+                  {track.neighborhood && <> · {track.neighborhood.name}</>}{" "}
+                  <LiveSoonBadge show={liveSoon.has(track.artistId)} />
                 </p>
               </div>
               {track.previewUrl && <PreviewButton url={track.previewUrl} />}

@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { GraphExplorer } from "@/components/GraphExplorer";
+import { EventCard, LiveSoonBadge, useLiveSoonIds } from "@/components/LiveSoon";
 import { PreviewButton } from "@/components/PreviewButton";
 import { ReceiptSheet } from "@/components/ReceiptSheet";
 import { StreamingButtons } from "@/components/StreamingButtons";
@@ -36,6 +37,7 @@ export function ArtistView({ artistId }: { artistId: string }) {
   const hoods = useQuery(anyApi.app.neighborhoodList) as
     | Neighborhood[]
     | undefined;
+  const liveSoon = useLiveSoonIds();
 
   const hoodIndexOf = useCallback(
     (neighborhoodId: string | undefined) => {
@@ -167,6 +169,7 @@ export function ArtistView({ artistId }: { artistId: string }) {
                   if (id !== artistId) router.push(`/artist/${id}`);
                 }}
                 onEdgeClick={setReceiptEdge}
+                liveIds={liveSoon}
               />
             </div>
           )}
@@ -208,6 +211,7 @@ export function ArtistView({ artistId }: { artistId: string }) {
                     {panel.neighborhood.name}
                   </span>
                 )}
+                <LiveSoonBadge show={liveSoon.has(artistId)} />
                 {isBridge && (
                   <span
                     className="inline-flex items-center gap-1 rounded-full bg-raised px-2.5 py-0.5 text-xs font-medium"
@@ -268,6 +272,8 @@ export function ArtistView({ artistId }: { artistId: string }) {
             )}
           </div>
         </div>
+
+        <EventCard artistId={artistId} />
 
         {panel && (
           <TrustChip

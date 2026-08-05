@@ -19,6 +19,7 @@ export type GraphNode = {
   spins: number;
   color: string;
   isFocus: boolean;
+  isLive?: boolean; // upcoming show — drawn with a "live" dot
   x?: number;
   y?: number;
 };
@@ -146,6 +147,12 @@ export default function ForceGraphInner({
           ctx.lineWidth = 2 / globalScale;
           ctx.strokeStyle = "#e8eaf0";
           ctx.stroke();
+        }
+        if (n.isLive) {
+          ctx.beginPath();
+          ctx.arc(n.x! + r * 0.8, n.y! - r * 0.8, Math.max(r * 0.3, 1.4), 0, 2 * Math.PI);
+          ctx.fillStyle = "#34d399";
+          ctx.fill();
         }
         if (!labelRule || labelRule(n, globalScale)) {
           const fontSize = Math.max(11 / globalScale, 2.2);

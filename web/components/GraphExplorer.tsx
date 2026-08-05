@@ -32,6 +32,7 @@ export function GraphExplorer({
   warmupTicks,
   cooldownTicks,
   mapMode,
+  liveIds,
 }: {
   data: EgoNetwork;
   hoodIndexOf: (neighborhoodId: string | undefined) => number | undefined;
@@ -43,6 +44,7 @@ export function GraphExplorer({
   warmupTicks?: number;
   cooldownTicks?: number;
   mapMode?: boolean;
+  liveIds?: Set<string>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -66,6 +68,7 @@ export function GraphExplorer({
       spins: n.spinCount,
       color: hoodColor(hoodIndexOf(n.neighborhoodId)),
       isFocus: n.artistId === data.focus,
+      isLive: liveIds?.has(n.artistId) ?? false,
     }));
     const focusEdges = data.edges.filter(
       (e) => e.from === data.focus || e.to === data.focus
@@ -83,7 +86,7 @@ export function GraphExplorer({
     }));
     const maxSpins = Math.max(1, ...data.nodes.map((n) => n.spinCount));
     return { nodes, links, maxSpins };
-  }, [data, hoodIndexOf, trim]);
+  }, [data, hoodIndexOf, trim, liveIds]);
 
   return (
     <div ref={containerRef} className="h-full w-full touch-none">

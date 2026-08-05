@@ -114,10 +114,17 @@ export const egoNetwork = query({
       .query("graphEdges")
       .withIndex("by_to", (q) => q.eq("toArtistId", artistId))
       .collect();
-    const focusEdges = [...fromFocus, ...toFocus]
-      .filter(matchesStation)
-      .sort((a, b) => b.weight - a.weight)
-      .slice(0, cap);
+    // Curation edges compete for the cap by weight; canonical and editorial
+    // edges are rare, precious, and weight-1 — they always make the cut.
+    const allFocus = [...fromFocus, ...toFocus].filter(matchesStation);
+    const special = allFocus.filter((e) => e.type !== "curation");
+    const focusEdges = [
+      ...special,
+      ...allFocus
+        .filter((e) => e.type === "curation")
+        .sort((a, b) => b.weight - a.weight)
+        .slice(0, cap),
+    ];
 
     const visible = new Set<string>([artistId]);
     for (const e of focusEdges) {
@@ -163,14 +170,19 @@ export const egoNetwork = query({
       });
     }
 
-    const edges = [...focusEdges, ...interEdges].map((e) => ({
-      id: e._id,
-      from: e.fromArtistId,
-      to: e.toArtistId,
-      type: e.type,
-      weight: e.weight,
-      receipt: e.receipt,
-    }));
+    // Guard: an edge endpoint without a graph node (e.g. an editorial match
+    // to a catalog artist the graph build predates) would crash the renderer.
+    const placed = new Set(nodes.map((n) => n.artistId));
+    const edges = [...focusEdges, ...interEdges]
+      .filter((e) => placed.has(e.fromArtistId) && placed.has(e.toArtistId))
+      .map((e) => ({
+        id: e._id,
+        from: e.fromArtistId,
+        to: e.toArtistId,
+        type: e.type,
+        weight: e.weight,
+        receipt: e.receipt,
+      }));
     return { focus: artistId, nodes, edges };
   },
 });

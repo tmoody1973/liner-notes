@@ -137,6 +137,16 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_rawArtist", ["rawArtist"]),
 
+  // One row per artist the editorial extractor has processed (resumable
+  // worklist marker — sessions skip scanned artists). M5.
+  editorialScans: defineTable({
+    artistId: v.id("artists"),
+    checkedAt: v.number(),
+    connectionsFound: v.number(),
+    requests: v.number(),
+    runId: v.optional(v.id("stewardRuns")),
+  }).index("by_artist", ["artistId"]),
+
   // ── Influence graph ──────────────────────────────────────────────────
   graphNodes: defineTable({
     artistId: v.id("artists"),
@@ -162,6 +172,23 @@ export default defineSchema({
     name: v.string(),
     description: v.optional(v.string()),
   }),
+
+  // Upcoming shows matched to catalog artists, synced read-only from the
+  // source platform's Ticketmaster/AXS events (M5, MOO-473).
+  artistEvents: defineTable({
+    artistId: v.id("artists"),
+    title: v.string(),
+    venueName: v.string(),
+    city: v.string(),
+    region: v.optional(v.string()),
+    startsAt: v.optional(v.number()),
+    dateTbd: v.boolean(),
+    status: v.string(), // "on sale" | "sold out" | "venue change"
+    ticketUrl: v.optional(v.string()),
+    source: v.string(), // "ticketmaster" | "axs"
+    role: v.string(), // "headliner" | "support"
+    externalId: v.string(),
+  }).index("by_artist", ["artistId"]),
 
   // ── Listener product ─────────────────────────────────────────────────
   playlists: defineTable({

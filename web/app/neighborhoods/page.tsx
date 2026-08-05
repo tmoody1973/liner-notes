@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GraphExplorer } from "@/components/GraphExplorer";
+import { LiveSoonBadge, useLiveSoonIds } from "@/components/LiveSoon";
 import { hoodColor } from "@/lib/palette";
 import { STATION_LABELS } from "@/lib/stations";
 import type { ArtistLite, EgoNetwork, Neighborhood } from "@/lib/types";
@@ -25,6 +26,7 @@ export default function NeighborhoodsPage() {
   const [map, setMap] = useState<MapData | null>(null);
   const [station, setStation] = useState<string | null>(null);
   const [busySeed, setBusySeed] = useState<string | null>(null);
+  const liveSoon = useLiveSoonIds();
 
   useEffect(() => {
     void fetch("/api/map")
@@ -166,6 +168,7 @@ export default function NeighborhoodsPage() {
                 warmupTicks={300}
                 cooldownTicks={200}
                 mapMode
+                liveIds={liveSoon}
               />
             </div>
           ) : (
@@ -211,6 +214,7 @@ export default function NeighborhoodsPage() {
                     {map?.bridges[a.artistId] && (
                       <span title="Bridge artist">⚡</span>
                     )}
+                    <LiveSoonBadge show={liveSoon.has(a.artistId)} />
                     <span className="ml-auto shrink-0 text-xs text-muted">
                       {a.spinCount}
                     </span>

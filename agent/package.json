@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "graph": "tsx src/graph/build.ts",
     "graph:verify": "tsx src/graph/verify.ts",
-    "backfill:links": "tsx src/backfill-links.ts"
+    "backfill:links": "tsx src/backfill-links.ts",
+    "editorial": "tsx src/editorial.ts",
+    "sync:events": "tsx src/sync-events.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",
