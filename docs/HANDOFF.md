@@ -1,36 +1,35 @@
 # Handoff — Liner Notes (DataHub Agent Hackathon)
 
-**Updated 2026-08-04 ~19:15 CDT.** M1 complete, M2 one-third done. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1). Next action: **build MOO-462**.
+**Updated 2026-08-05 ~05:50 CDT.** M1 done, M2 two-thirds done (461+462 closed). Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1) — Tarik manages deadline pressure; don't cut corners to save time. Next action: **build MOO-463** (review page UI).
 
 ## Where truth lives (read, don't re-derive)
 
 - **Locked scope/PRD:** `_build_plan/prd.html` · **Research:** `docs/research/stell-r-artist-influence-hdsr.md` (Appendix A = traversal pseudocode for M3/M4)
-- **Linear (record of truth):** project "Liner Notes — DataHub Agent Hackathon", team Moodyco, issues MOO-459→474. Done: **459, 460, 461** (each closed with a real-evidence comment worth reading). In progress: nothing. Next: **MOO-462** (resolution+enrichment), then 463 (review UI), 464 (DataHub write-back) closes M2.
-- **M1 log:** `_build_plan/milestones/1-foundation-connector/milestone-log.md` (decisions + env gotchas). M2 log gets written when 461–464 are all done (per `_build_plan/milestones/2-steward-agent/prompt.md`).
-- **Workflow:** `linear-build:linear-build` skill per issue (align → In Progress → plan mode → build → verify against real data → Done with evidence). Suggested next-session skills: `linear-build:linear-build`, `claude-api` (before touching agent LLM code), `superpowers:verification-before-completion`.
+- **Linear (record of truth):** project "Liner Notes — DataHub Agent Hackathon", team Moodyco, MOO-459→474. Done: **459, 460, 461, 462** (each closed with a real-evidence comment worth reading — 462's includes the false-positive story). Next: **MOO-463** (review UI, `reviewItems` has 71 pending rows w/ candidates + adjudicatorNote), then 464 (DataHub write-back) closes M2.
+- **Workflow:** `linear-build:linear-build` skill per issue (align → In Progress → plan mode → build → verify against real data → Done with evidence). Load `claude-api` before touching agent LLM code.
 
-## Running state (live right now on this machine)
+## Running state (live right now)
 
-- **DataHub quickstart is running** in Docker (GMS :8080 healthy, UI :9002, login datahub/datahub). Both Convex deployments ingested: 30 datasets under containers `rm-playlist-v2` (18) + `liner-notes` (12). If Docker restarts: `connector/.venv/bin/datahub docker quickstart` (may need one rerun after a MySQL healthcheck race).
-- **Convex:** liner-notes deployment `dev:dusty-crocodile-663` (client config in `convex/.env.local`). Source = rm-playlist-v2 **dev** `precise-fish-444` — **prod is empty**, dev holds the real data (166k+ plays). Keys in root `.env.local` (gitignored; values quoted — they contain `|`).
-- **Steward work queue:** `workItems` has 1,055 rows, **all status "deferred"** from the MOO-461 chassis runs. MOO-462's resolver should process `pending` items — decide whether to reset deferred→pending (add a small mutation) or treat deferred as the resolver's intake. `stewardRuns` has 5 run records with Claude-written reports.
+- **Full-backlog drain session running in background** (`/tmp/steward-drain-run.log`, no --max-items) with the corrected resolver. Queue at last check: 104 resolved / 71 review / 1 ignored / ~879 pending of 1,055. Resumable — kill/restart is safe; deferred items auto-requeue at session start.
+- **DataHub Docker is STOPPED** (freed Tarik's 16GB M3). **Decision: Linode 8GB VM (~$9/wk, hourly) gets set up when MOO-464 starts** — Tarik must create the Linode account. Rules verified (datahub.devpost.com/rules): local quickstart is officially fine; no DataHub Cloud needed. Agent's orient phase degrades gracefully while DataHub is down.
+- **Convex:** liner-notes `dev:dusty-crocodile-663`; source rm-playlist-v2 dev `precise-fish-444` read-only (`data:view` key). Keys in root `.env.local` (quoted — contain `|`).
+
+## MOO-462 outcomes the next issues build on
+
+- **Resolution pipeline** (`agent/src/resolve.ts`, `sources.ts`, `adjudicate.ts`, `enrich.ts`, `sonovault.ts`): score = name-sim + MB score + Discogs/Deezer cross-check + station-genre coherence + era. Buckets: ≥0.85 + name≥0.85 + **positive genre-or-era corroboration** → auto; 0.55–0.85 → Claude (claude-opus-5, structured verdict, reasoning persisted); else review. Name-only matches NEVER auto-apply (hand-check found a Virginia screamo band matched for local act "Dialogues" — see MOO-462 comment).
+- **MOO-463 ready-made pieces:** `reviewItems` rows carry scored candidates + `adjudicatorNote`; `steward:retractResolution` mutation = the reject flow; approve flow should call `applyResolution` with method "human".
+- **Standing rule from Tarik: 414music-only artists skip external enrichment** (direct local uploads, not on streaming platforms). Ignore patterns catch station branding ("414Music.FM" → ignored).
+- **Streaming links (MOO-471): SonoVault is plan A** (Tarik's call; full eval + API docs notes in MOO-471 comments). Client wired in `agent/src/sonovault.ts`, dormant until **Tarik creates the account** (sonovault.now/signup, free) and adds `SONOVAULT_API_KEY` to root `.env.local`. Fallbacks: song.link URL from appleMusicSongId, then search links. Deezer links come from Deezer's own ISRC lookup, not SonoVault.
+- **DataHub skills installed** (`.agents/skills/`, symlinked for Claude Code): datahub-search/enrich/lineage/quality + connector-review-vs-22-standards — use for MOO-464 and the upstream connector PR. `.agents/`, `.claude/`, `skills-lock.json` are untracked; decide at M5 whether to gitignore.
 
 ## Env & tooling gotchas (hard-won)
 
-- Root `.env.local`: `CONVEX_SOURCE_URL`, `CONVEX_SOURCE_DEPLOY_KEY` (scope data:view), `CONVEX_LINER_NOTES_DEPLOY_KEY`, `ANTHROPIC_API_KEY`, `DISCOGS_TOKEN` (+KEY/SECRET), `PERPLEXITY_API_KEY`. All verified working 2026-08-04.
-- Python 3.14 is system default — too new for acryl-datahub; connector venv is `connector/.venv` (py3.11 via uv). `uvx` available (agent spawns `uvx mcp-server-datahub`).
-- Plain `npx convex dev --once` from `convex/` silently targets an anonymous LOCAL deployment — always confirm `convex/.env.local` says `dev:dusty-crocodile-663` after configure.
-- Disk was at 100% earlier today (corrupted Docker VM, since reset). ~35-48GB free now. **~92GB of node_modules/.venv junk in `~/Documents/Projects` still reclaimable** — bulk `rm -rf` was permission-blocked for the agent; Tarik can run the find command (in scrollback / re-derive: find node_modules,.next,.venv,venv,__pycache__,.turbo dirs, rm -rf).
-- **Odesli public API is dead (410 since Aug 1).** Allowlist application submitted. Fallback plan A/B/C recorded as a comment on MOO-471 (song.link URL construction from appleMusicSongId; SonoVault; allowlist).
-
-## MOO-462 implementation notes (what the chassis already gives you)
-
-- Swap the defer handler in `agent/src/session.ts` (marked `ponytail:` comment) with real resolution. Plumbing that exists: `agent/src/polite.ts` (politeFetchJson: per-host spacing, backoff, file cache — REQUIRED for MusicBrainz 1 req/s), `agent/src/convex.ts` (LinerNotesClient wrapping `convex/convex/steward.ts` functions), `agent/src/report.ts` (Claude claude-opus-5 pattern with refusal fallback — reuse for LLM adjudication).
-- Convex `artists` table (schema.ts) has the resolution record shape: `{method, confidence, evidence, runId}` + rawNames[] — designed for the three buckets (auto-apply / LLM-adjudicated / human review). `reviewItems` table ready for the review bucket (MOO-463 renders it).
-- MusicBrainz: no key, polite UA string required (e.g. `LinerNotes/0.1 (tarik@radiomilwaukee.org)`), 1 req/s. Discogs token in env. Deezer public.
-- Real sample messiness to design against: "414Music.FM" (station name as artist, 80 plays — should hit the ignore path or review), casing variants, "feat." strings.
-- Judge mode (`--mode=judge`) must keep working — its 91 sample items resolve against real MusicBrainz.
+- Python 3.14 system default too new for acryl-datahub; connector venv `connector/.venv` (py3.11). `uvx` available.
+- Plain `npx convex dev --once` silently targets an anonymous LOCAL deployment — confirm `convex/.env.local` says `dev:dusty-crocodile-663`.
+- MusicBrainz 1.1s/req + UA `LinerNotes/0.1 (tarik@radiomilwaukee.org)`; all HTTP via `agent/src/polite.ts` (cache in gitignored `agent/.cache/`). Full drain ≈ 2h; `--max-items=N` bounds a run.
+- `npm run check` (agent) = resolver self-check incl. the Dialogues regression; `npm run typecheck` before commits.
+- Disk on Tarik's Mac is tight again (~16GB free) — ~92GB of node_modules junk in `~/Documents/Projects` still reclaimable by Tarik.
 
 ## Standing decisions (do not reopen)
 
-Source is read-only (enforced by key scope). Steward writes only to liner-notes deployment. No audio features (tag/genre similarity instead). Scope questions are settled — new ideas become Linear issue comments, not scope changes. `_build_plan/` is temporary docs, never imported by code.
+Source is read-only. Steward writes only to liner-notes deployment. No audio features. Scope questions settled — new ideas become Linear issue comments, not scope changes. `_build_plan/` is temporary docs, never imported by code. SonoVault > song.link hack (don't demote it again). 414music-only = no external enrichment.
