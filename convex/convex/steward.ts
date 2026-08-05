@@ -247,6 +247,100 @@ export const dedupeReviewItems = mutation({
   },
 });
 
+// ── Review page (MOO-463) ────────────────────────────────────────────────
+
+// Pending review items joined with their work-item context for the card UI.
+export const pendingReviews = query({
+  args: {},
+  handler: async (ctx) => {
+    const items = await ctx.db
+      .query("reviewItems")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    const result = [];
+    for (const item of items) {
+      const workItem = await ctx.db
+        .query("workItems")
+        .withIndex("by_rawArtist", (q) => q.eq("rawArtist", item.rawArtist))
+        .unique();
+      result.push({
+        _id: item._id,
+        rawArtist: item.rawArtist,
+        candidates: item.candidates,
+        adjudicatorNote: item.adjudicatorNote,
+        playCount: workItem?.playCount ?? 0,
+        stationSlugs: workItem?.stationSlugs ?? [],
+        topTitle: workItem?.topTitle,
+      });
+    }
+    return result.sort((a, b) => b.playCount - a.playCount);
+  },
+});
+
+// One-click approve: apply the chosen candidate with human provenance.
+export const approveReview = mutation({
+  args: {
+    reviewItemId: v.id("reviewItems"),
+    mbid: v.string(),
+  },
+  handler: async (ctx, { reviewItemId, mbid }) => {
+    const item = await ctx.db.get(reviewItemId);
+    if (!item || item.status !== "pending") return;
+    const candidate = item.candidates.find((c) => c.mbid === mbid);
+    if (!candidate) throw new Error("mbid is not one of this item's candidates");
+
+    const resolution = {
+      method: "human",
+      confidence: 1,
+      evidence: `human-approved via review page; agent evidence: ${candidate.evidence}`,
+      resolvedAt: Date.now(),
+    };
+    const existing = await ctx.db
+      .query("artists")
+      .withIndex("by_mbid", (q) => q.eq("mbid", mbid))
+      .unique();
+    if (existing) {
+      const rawNames = existing.rawNames.includes(item.rawArtist)
+        ? existing.rawNames
+        : [...existing.rawNames, item.rawArtist];
+      await ctx.db.patch(existing._id, { rawNames, resolution });
+    } else {
+      await ctx.db.insert("artists", {
+        mbid,
+        displayName: candidate.name,
+        rawNames: [item.rawArtist],
+        resolution,
+      });
+    }
+    const workItem = await ctx.db
+      .query("workItems")
+      .withIndex("by_rawArtist", (q) => q.eq("rawArtist", item.rawArtist))
+      .unique();
+    if (workItem) {
+      await ctx.db.patch(workItem._id, { status: "resolved", updatedAt: Date.now() });
+    }
+    await ctx.db.patch(reviewItemId, { status: "approved", approvedMbid: mbid });
+  },
+});
+
+// One-click reject: none of the candidates is the artist (or it isn't a real
+// artist). The work item is excluded from every future session's worklist.
+export const rejectReview = mutation({
+  args: { reviewItemId: v.id("reviewItems") },
+  handler: async (ctx, { reviewItemId }) => {
+    const item = await ctx.db.get(reviewItemId);
+    if (!item || item.status !== "pending") return;
+    const workItem = await ctx.db
+      .query("workItems")
+      .withIndex("by_rawArtist", (q) => q.eq("rawArtist", item.rawArtist))
+      .unique();
+    if (workItem) {
+      await ctx.db.patch(workItem._id, { status: "ignored", updatedAt: Date.now() });
+    }
+    await ctx.db.patch(reviewItemId, { status: "rejected" });
+  },
+});
+
 // Undo a wrong resolution: remove the artist row (and its tracks) and put the
 // work item back in the queue. Used for hand-check corrections and by the
 // review page's reject flow (MOO-463).
