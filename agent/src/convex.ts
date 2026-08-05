@@ -119,6 +119,14 @@ export class LinerNotesClient {
     return this.client.query(anyApi.steward.workItemCounts, {});
   }
 
+  datahubStats(): Promise<{
+    workItems: { total: number } & Record<string, number>;
+    duplicateReviewRows: number;
+    artists: { total: number; resolved: number; enriched: number };
+  }> {
+    return this.client.query(anyApi.steward.datahubStats, {});
+  }
+
   markItem(id: string, status: string, runId: string): Promise<null> {
     return this.client.mutation(anyApi.steward.markItem, { id, status, runId });
   }

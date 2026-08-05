@@ -109,6 +109,39 @@ export const workItemCounts = query({
   },
 });
 
+// Aggregate stats the steward writes into DataHub as quality assertions
+// (MOO-464). The same query doubles as the independent count when verifying
+// the assertion values side by side.
+export const datahubStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const items = await ctx.db.query("workItems").collect();
+    const byStatus: Record<string, number> = {};
+    for (const item of items) byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
+
+    const pendingReviews = await ctx.db
+      .query("reviewItems")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    const seenRaw = new Set<string>();
+    let duplicateReviewRows = 0;
+    for (const row of pendingReviews) {
+      if (seenRaw.has(row.rawArtist)) duplicateReviewRows += 1;
+      else seenRaw.add(row.rawArtist);
+    }
+
+    const artists = await ctx.db.query("artists").collect();
+    const resolved = artists.filter((a) => a.resolution !== undefined);
+    const enriched = resolved.filter((a) => a.genres !== undefined);
+
+    return {
+      workItems: { total: items.length, ...byStatus },
+      duplicateReviewRows,
+      artists: { total: artists.length, resolved: resolved.length, enriched: enriched.length },
+    };
+  },
+});
+
 // Judge mode reads sample plays from this deployment instead of rm-playlist-v2.
 export const judgePlays = query({
   args: {},

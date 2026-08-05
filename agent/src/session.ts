@@ -4,6 +4,7 @@ import { adjudicate } from "./adjudicate.js";
 import { LinerNotesClient } from "./convex.js";
 import { DataHubMcp, summarizeAssertions } from "./datahub.js";
 import { enrichOne } from "./enrich.js";
+import { DataHubGms, datasetUrn } from "./gms.js";
 import { phaseBanner, say } from "./narrate.js";
 import { writeReport } from "./report.js";
 import { resolveItem, type ScoredCandidate } from "./resolve.js";
@@ -27,6 +28,7 @@ export async function runSession(
   const mode: SourceMode = detectMode(explicitMode);
   const linerNotes = new LinerNotesClient();
   const datahub = new DataHubMcp();
+  const gms = new DataHubGms();
 
   let interrupted = false;
   process.on("SIGINT", () => {
@@ -55,9 +57,14 @@ export async function runSession(
 
     const playsUrn = datasets.find((d) => d.urn.includes(SOURCE_PLAYS_DATASET))?.urn;
     if (playsUrn) {
-      const entity = await datahub.getEntity(playsUrn);
-      assertionSummary = summarizeAssertions(entity);
       say(`source backlog dataset: ${SOURCE_PLAYS_DATASET}`);
+      // The closed loop (MOO-464): read the quality assertions the previous
+      // session wrote, so this session's plan starts from documented state.
+      try {
+        assertionSummary = await gms.readAssertionState(playsUrn);
+      } catch {
+        assertionSummary = summarizeAssertions(await datahub.getEntity(playsUrn));
+      }
       say(`assertion state: ${assertionSummary}`);
     } else {
       assertionSummary = "plays dataset not found in DataHub — run the connector ingest first";
@@ -242,6 +249,32 @@ export async function runSession(
 
   const queue = await linerNotes.workItemCounts();
   say(`work queue now: ${JSON.stringify(queue)}`);
+
+  // ── Write-back (MOO-464): document this session's work into DataHub ────
+  say("writing the session's work back into DataHub...");
+  try {
+    const playsUrn =
+      datasets.find((d) => d.urn.includes(SOURCE_PLAYS_DATASET))?.urn ??
+      datasetUrn(SOURCE_PLAYS_DATASET);
+    const resolvedUrns = ["artists", "tracks", "workItems"].map((t) =>
+      datasetUrn(`liner-notes.${t}`)
+    );
+    const stewardStats = await linerNotes.datahubStats();
+
+    const outcomes = await gms.upsertSessionAssertions(playsUrn, stewardStats);
+    for (const o of outcomes) {
+      say(`  assertion ${o.pass ? "PASS" : "FAIL"} · ${o.label} (${o.detail})`);
+    }
+    await gms.upsertLineage(playsUrn, resolvedUrns);
+    say(`  lineage upserted: ${SOURCE_PLAYS_DATASET} → artists, tracks, workItems`);
+    const documented = await gms.writeDocumentation(report, runId);
+    say(`  run report + descriptions written on: ${documented.join(", ")}`);
+    const allUrns = datasets.length > 0 ? datasets.map((d) => d.urn) : [playsUrn, ...resolvedUrns];
+    await gms.ensureOwnership(allUrns);
+    say(`  steward registered as technical owner on ${allUrns.length} datasets`);
+  } catch (error) {
+    say(`write-back degraded (DataHub unreachable?): ${(error as Error).message.slice(0, 160)}`);
+  }
 
   await datahub.close();
   if (interrupted) process.exitCode = 130;
