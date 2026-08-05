@@ -88,6 +88,7 @@ export async function runSession(
   const { requeued } = await linerNotes.requeueDeferred();
   if (requeued > 0) say(`${requeued} previously deferred items requeued for retry`);
   const topTitleByRaw = new Map(worklist.map((w) => [w.rawArtist, w.topTitle]));
+  const stationsByRaw = new Map(worklist.map((w) => [w.rawArtist, w.stationSlugs]));
 
   let processed = 0;
   let capped = false;
@@ -188,6 +189,15 @@ export async function runSession(
     say(`${batch.length} resolved artists awaiting enrichment`);
     for (const artist of batch) {
       if (interrupted) break;
+      // 414music-only artists are direct local uploads — not on MusicBrainz or
+      // streaming platforms; external enrichment is wasted calls (per Tarik).
+      const stations = artist.rawNames.flatMap((raw) => stationsByRaw.get(raw) ?? []);
+      if (stations.length > 0 && stations.every((s) => s === "414music")) {
+        await linerNotes.enrichArtist({ artistId: artist._id, genres: [] });
+        bump("skippedLocal");
+        say(`${artist.displayName} → enrichment skipped (414music-only local artist)`);
+        continue;
+      }
       const topTitle = artist.rawNames
         .map((raw) => topTitleByRaw.get(raw))
         .find((t) => t !== undefined);

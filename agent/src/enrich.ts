@@ -1,6 +1,7 @@
 // Copyright 2026 Radio Milwaukee / Liner Notes contributors
 // SPDX-License-Identifier: Apache-2.0
 import type { Artist, LinerNotesClient } from "./convex.js";
+import { sonovaultLinksByIsrc } from "./sonovault.js";
 import {
   deezerSearchArtist,
   discogsSearchArtist,
@@ -18,6 +19,7 @@ export interface EnrichmentResult {
   image: boolean;
   isrc: boolean;
   releaseYear?: number;
+  streamingLinks: number;
 }
 
 export async function enrichOne(
@@ -32,7 +34,9 @@ export async function enrichOne(
     deezerSearchArtist(artist.displayName).catch(() => null),
     discogsSearchArtist(artist.displayName).catch(() => null),
   ]);
-  let track: { title: string; isrc?: string; releaseYear?: number } | undefined;
+  let track:
+    | { title: string; isrc?: string; releaseYear?: number; streamingLinks?: Record<string, string> }
+    | undefined;
   if (topTitle) {
     track = { title: topTitle };
     try {
@@ -40,6 +44,10 @@ export async function enrichOne(
       track = { title: topTitle, isrc: recording.isrc, releaseYear: recording.releaseYear };
     } catch {
       // keep the bare title; ISRC/year stay unset
+    }
+    if (track.isrc) {
+      const links = await sonovaultLinksByIsrc(track.isrc);
+      if (links) track.streamingLinks = links;
     }
   }
 
@@ -59,5 +67,6 @@ export async function enrichOne(
     image: Boolean(deezer?.imageUrl),
     isrc: Boolean(track?.isrc),
     releaseYear: track?.releaseYear,
+    streamingLinks: Object.keys(track?.streamingLinks ?? {}).length,
   };
 }

@@ -101,7 +101,12 @@ export class LinerNotesClient {
     deezerId?: string;
     discogsId?: string;
     mbRelations?: { type: string; targetMbid: string; targetName: string }[];
-    track?: { title: string; isrc?: string; releaseYear?: number };
+    track?: {
+      title: string;
+      isrc?: string;
+      releaseYear?: number;
+      streamingLinks?: Record<string, string>;
+    };
   }): Promise<null> {
     return this.client.mutation(anyApi.steward.enrichArtist, args);
   }

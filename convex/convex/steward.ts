@@ -195,6 +195,14 @@ export const queueReview = mutation({
     runId: v.id("stewardRuns"),
   },
   handler: async (ctx, { workItemId, rawArtist, candidates, adjudicatorNote, runId }) => {
+    // Re-reviewing a requeued item replaces its stale pending row instead of
+    // appending a duplicate (concurrent/killed sessions produced dupes).
+    const stale = await ctx.db
+      .query("reviewItems")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .filter((q) => q.eq(q.field("rawArtist"), rawArtist))
+      .collect();
+    for (const row of stale) await ctx.db.delete(row._id);
     await ctx.db.insert("reviewItems", {
       rawArtist,
       candidates,
@@ -211,6 +219,31 @@ export const queueReview = mutation({
         updatedAt: Date.now(),
       });
     }
+  },
+});
+
+// Maintenance: collapse duplicate pending review rows per rawArtist, keeping
+// the newest (dupes came from concurrent/killed sessions racing the queue).
+export const dedupeReviewItems = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const pending = await ctx.db
+      .query("reviewItems")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    const newestByRaw = new Map<string, (typeof pending)[number]>();
+    for (const row of pending) {
+      const seen = newestByRaw.get(row.rawArtist);
+      if (!seen || row._creationTime > seen._creationTime) newestByRaw.set(row.rawArtist, row);
+    }
+    let deleted = 0;
+    for (const row of pending) {
+      if (newestByRaw.get(row.rawArtist)!._id !== row._id) {
+        await ctx.db.delete(row._id);
+        deleted += 1;
+      }
+    }
+    return { deleted, kept: newestByRaw.size };
   },
 });
 
@@ -266,6 +299,7 @@ export const enrichArtist = mutation({
         title: v.string(),
         isrc: v.optional(v.string()),
         releaseYear: v.optional(v.number()),
+        streamingLinks: v.optional(v.record(v.string(), v.string())),
       })
     ),
   },
@@ -281,6 +315,7 @@ export const enrichArtist = mutation({
         await ctx.db.patch(existing._id, {
           isrc: track.isrc,
           releaseYear: track.releaseYear,
+          streamingLinks: track.streamingLinks,
         });
       } else {
         await ctx.db.insert("tracks", { ...track, artistId });
