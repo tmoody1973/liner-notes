@@ -45,6 +45,10 @@ export default function ForceGraphInner({
   maxSpins,
   onNodeClick,
   onEdgeClick,
+  labelRule,
+  warmupTicks = 0,
+  cooldownTicks = 90,
+  mapMode = false,
 }: {
   width: number;
   height: number;
@@ -53,34 +57,77 @@ export default function ForceGraphInner({
   maxSpins: number;
   onNodeClick: (artistId: string) => void;
   onEdgeClick?: (edge: EgoEdge) => void;
+  // Which labels to draw at a given zoom (default: all — fine for ego views;
+  // the 604-node city map labels only anchors until you zoom in).
+  labelRule?: (node: GraphNode, globalScale: number) => boolean;
+  // Big graphs need more simulation: warmup runs before first paint,
+  // cooldown after. Ego defaults suit ~30-node views.
+  warmupTicks?: number;
+  cooldownTicks?: number;
+  // City-map physics: weak link pull + gentler charge so districts spread
+  // into a readable cloud instead of a hub filament.
+  mapMode?: boolean;
 }) {
   const fgRef = useRef<
     ForceGraphMethods<NodeObject<GraphNode>, LinkObject<GraphNode, GraphLink>> | undefined
   >(undefined);
-  // Auto-fit once per data change, not after every user drag.
-  const fittedRef = useRef(false);
+  // Auto-fit until the user takes over (drag/zoom/tap).
+  const userTookOverRef = useRef(false);
 
   useEffect(() => {
-    fittedRef.current = false;
     const fg = fgRef.current;
     if (!fg) return;
-    fg.d3Force("charge")?.strength(-160);
+    fg.d3Force("charge")?.strength(mapMode ? -60 : -160);
     const linkForce = fg.d3Force("link") as
-      | { distance: (fn: (l: GraphLink) => number) => void }
+      | {
+          distance: (fn: (l: GraphLink) => number) => void;
+          strength: (s: number) => void;
+        }
       | undefined;
     linkForce?.distance((l: GraphLink) => 30 + 50 / Math.sqrt(l.weight));
-  }, [nodes, links]);
+    if (mapMode) linkForce?.strength(0.05);
+  }, [nodes, links, mapMode]);
 
-  // Containers settle late on mobile (flex layout after data load) — re-fit
-  // whenever the canvas dimensions change.
+  // Fit to the 92nd-percentile radius around the layout's centroid — a few
+  // weakly-linked outliers otherwise inflate the bounding box until the real
+  // map is a speck. (The lib mutates our node objects with live x/y.)
+  const fit = (ms: number) => {
+    const placed = nodes.filter((n) => n.x !== undefined && n.y !== undefined);
+    if (placed.length === 0) return;
+    const cx = placed.reduce((s, n) => s + n.x!, 0) / placed.length;
+    const cy = placed.reduce((s, n) => s + n.y!, 0) / placed.length;
+    const dist = (n: GraphNode) => Math.hypot(n.x! - cx, n.y! - cy);
+    const sorted = placed.map(dist).sort((a, b) => a - b);
+    const r = sorted[Math.floor(sorted.length * 0.92)] ?? Infinity;
+    fgRef.current?.zoomToFit(ms, 40, (n) => dist(n as GraphNode) <= r);
+  };
+
+  // Layouts keep contracting for a while (especially the 604-node map) and
+  // containers settle late on mobile — re-fit on a staged schedule until the
+  // user interacts, then never fight their viewport again.
   useEffect(() => {
-    const t = setTimeout(() => fgRef.current?.zoomToFit(300, 40), 150);
-    return () => clearTimeout(t);
-  }, [width, height]);
+    userTookOverRef.current = false;
+    const timers = [150, 1200, 4000, 9000, 16000].map((ms) =>
+      setTimeout(() => {
+        if (!userTookOverRef.current) fit(300);
+      }, ms)
+    );
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [width, height, nodes]);
 
   const radius = (n: GraphNode) => 3 + 9 * Math.sqrt(n.spins / maxSpins);
 
   return (
+    <div
+      className="h-full w-full"
+      onPointerDownCapture={() => {
+        userTookOverRef.current = true;
+      }}
+      onWheelCapture={() => {
+        userTookOverRef.current = true;
+      }}
+    >
     <ForceGraph2D
       ref={fgRef}
       width={width}
@@ -100,12 +147,14 @@ export default function ForceGraphInner({
           ctx.strokeStyle = "#e8eaf0";
           ctx.stroke();
         }
-        const fontSize = Math.max(11 / globalScale, 2.2);
-        ctx.font = `${n.isFocus ? "700" : "400"} ${fontSize}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillStyle = n.isFocus ? "#e8eaf0" : "#aeb6c8";
-        ctx.fillText(n.name, n.x!, n.y! + r + 1.5);
+        if (!labelRule || labelRule(n, globalScale)) {
+          const fontSize = Math.max(11 / globalScale, 2.2);
+          ctx.font = `${n.isFocus ? "700" : "400"} ${fontSize}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+          ctx.fillStyle = n.isFocus ? "#e8eaf0" : "#aeb6c8";
+          ctx.fillText(n.name, n.x!, n.y! + r + 1.5);
+        }
       }}
       nodePointerAreaPaint={(node, color, ctx) => {
         const n = node as GraphNode;
@@ -126,15 +175,14 @@ export default function ForceGraphInner({
         onEdgeClick ? (link) => onEdgeClick((link as GraphLink).edge) : undefined
       }
       onEngineStop={() => {
-        if (!fittedRef.current) {
-          fittedRef.current = true;
-          fgRef.current?.zoomToFit(400, 40);
-        }
+        if (!userTookOverRef.current) fit(400);
       }}
-      cooldownTicks={90}
+      warmupTicks={warmupTicks}
+      cooldownTicks={cooldownTicks}
       d3VelocityDecay={0.3}
-      minZoom={0.5}
+      minZoom={0.05}
       maxZoom={8}
     />
+    </div>
   );
 }

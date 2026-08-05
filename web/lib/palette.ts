@@ -12,6 +12,10 @@ export const EDGE_COLORS: Record<string, string> = {
   editorial: "#60a5fa", // arrives in M5; the palette anticipates it
 };
 
+// Bridge badge threshold: real distribution is p95≈0.22 with a clear elite
+// band 0.6–1.0 (all Milwaukee cross-scene connectors); 0.5 captures them.
+export const BRIDGE_THRESHOLD = 0.5;
+
 export function hoodColor(index: number | undefined): string {
   if (index === undefined || index < 0) return HOOD_NONE;
   return HOOD_COLORS[index % HOOD_COLORS.length];

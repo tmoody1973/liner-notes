@@ -7,11 +7,15 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { GraphExplorer } from "@/components/GraphExplorer";
 import { PreviewButton } from "@/components/PreviewButton";
-import { EDGE_COLORS, hoodColor } from "@/lib/palette";
+import { ReceiptSheet } from "@/components/ReceiptSheet";
+import { StreamingButtons } from "@/components/StreamingButtons";
+import { TrustChip } from "@/components/TrustChip";
+import { BRIDGE_THRESHOLD, EDGE_COLORS, hoodColor } from "@/lib/palette";
 import { STATION_LABELS, stationLabel } from "@/lib/stations";
 import {
   formatDate,
   type ArtistPanel,
+  type EgoEdge,
   type EgoNetwork,
   type Neighborhood,
 } from "@/lib/types";
@@ -19,6 +23,7 @@ import {
 export function ArtistView({ artistId }: { artistId: string }) {
   const router = useRouter();
   const [station, setStation] = useState<string | null>(null);
+  const [receiptEdge, setReceiptEdge] = useState<EgoEdge | null>(null);
 
   const panel = useQuery(anyApi.app.artistPanel, { artistId }) as
     | ArtistPanel
@@ -45,6 +50,49 @@ export function ArtistView({ artistId }: { artistId: string }) {
     () => hoodIndexOf(panel?.neighborhood?.id),
     [hoodIndexOf, panel]
   );
+
+  // Bridge artists: which other district do this artist's connections
+  // concentrate in? (weight tally over the ego network's neighbors)
+  const isBridge = (panel?.bridgeScore ?? 0) >= BRIDGE_THRESHOLD;
+  const bridgeTarget = useMemo(() => {
+    if (!isBridge || !ego || !hoods) return null;
+    const tally = new Map<string, number>();
+    for (const e of ego.edges) {
+      const otherId = e.from === artistId ? e.to : e.from;
+      if (e.from !== artistId && e.to !== artistId) continue;
+      const hood = ego.nodes.find((n) => n.artistId === otherId)?.neighborhoodId;
+      if (hood && hood !== panel?.neighborhood?.id) {
+        tally.set(hood, (tally.get(hood) ?? 0) + e.weight);
+      }
+    }
+    const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (!top) return null;
+    const hood = hoods.find((h) => h.id === top[0]);
+    return hood ? { id: hood.id, name: hood.name } : null;
+  }, [isBridge, ego, hoods, artistId, panel]);
+  const [crossing, setCrossing] = useState(false);
+
+  const crossBridge = async () => {
+    if (!bridgeTarget) return;
+    setCrossing(true);
+    try {
+      const res = await fetch("/api/playlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seedArtistId: artistId,
+          targetNeighborhoodId: bridgeTarget.id,
+        }),
+      });
+      if (res.ok) {
+        const { playlistId } = (await res.json()) as { playlistId: string };
+        router.push(`/playlist/${playlistId}`);
+        return;
+      }
+    } finally {
+      setCrossing(false);
+    }
+  };
 
   if (panel === null) {
     return (
@@ -118,11 +166,12 @@ export function ArtistView({ artistId }: { artistId: string }) {
                 onNodeClick={(id) => {
                   if (id !== artistId) router.push(`/artist/${id}`);
                 }}
+                onEdgeClick={setReceiptEdge}
               />
             </div>
           )}
           <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[11px] text-muted">
-            tap an artist to re-center · pinch or scroll to zoom
+            tap an artist to re-center · tap a connection for its receipt
           </p>
         </div>
       </section>
@@ -143,20 +192,42 @@ export function ArtistView({ artistId }: { artistId: string }) {
               <h1 className="text-2xl font-bold tracking-tight">
                 {panel?.displayName ?? "Loading…"}
               </h1>
-              {panel?.neighborhood && (
-                <span
-                  className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  style={{
-                    background: `${hoodColor(hoodIndex)}22`,
-                    color: hoodColor(hoodIndex),
-                  }}
-                >
+              <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {panel?.neighborhood && (
                   <span
-                    className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: hoodColor(hoodIndex) }}
-                  />
-                  {panel.neighborhood.name}
-                </span>
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                    style={{
+                      background: `${hoodColor(hoodIndex)}22`,
+                      color: hoodColor(hoodIndex),
+                    }}
+                  >
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: hoodColor(hoodIndex) }}
+                    />
+                    {panel.neighborhood.name}
+                  </span>
+                )}
+                {isBridge && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-raised px-2.5 py-0.5 text-xs font-medium"
+                    title={`Bridge score ${panel?.bridgeScore?.toFixed(2)}`}
+                  >
+                    ⚡ bridge artist
+                    {bridgeTarget && <> — into {bridgeTarget.name}</>}
+                  </span>
+                )}
+              </span>
+              {isBridge && bridgeTarget && (
+                <button
+                  onClick={crossBridge}
+                  disabled={crossing}
+                  className="mt-2 w-full rounded-xl bg-raised px-3 py-2 text-sm font-semibold transition hover:bg-(--hood-0) hover:text-background disabled:opacity-50"
+                >
+                  {crossing
+                    ? "Crossing…"
+                    : `Cross the bridge → ${bridgeTarget.name} playlist`}
+                </button>
               )}
             </div>
 
@@ -198,6 +269,14 @@ export function ArtistView({ artistId }: { artistId: string }) {
           </div>
         </div>
 
+        {panel && (
+          <TrustChip
+            resolution={panel.resolution}
+            mbid={panel.mbid}
+            lastRunAt={panel.lastRunAt}
+          />
+        )}
+
         {panel && panel.tracks.length > 0 && (
           <div className="rounded-2xl border border-edge bg-surface p-4">
             <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
@@ -205,21 +284,44 @@ export function ArtistView({ artistId }: { artistId: string }) {
             </h2>
             <ul className="mt-3 space-y-2.5">
               {panel.tracks.map((t) => (
-                <li key={t.id} className="flex items-center gap-3">
-                  {t.previewUrl && <PreviewButton url={t.previewUrl} />}
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{t.title}</p>
-                    <p className="text-xs text-muted">
-                      {t.releaseYear ?? ""}
-                      {t.previewUrl ? " · 30s preview" : ""}
-                    </p>
+                <li key={t.id} className="space-y-1.5">
+                  <div className="flex items-center gap-3">
+                    {t.previewUrl && <PreviewButton url={t.previewUrl} />}
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{t.title}</p>
+                      <p className="text-xs text-muted">
+                        {t.releaseYear ?? ""}
+                        {t.previewUrl ? " · 30s preview" : ""}
+                      </p>
+                    </div>
                   </div>
+                  <StreamingButtons
+                    links={t.streamingLinks}
+                    artistName={panel.displayName}
+                    title={t.title}
+                    compact
+                  />
                 </li>
               ))}
             </ul>
           </div>
         )}
       </aside>
+
+      {receiptEdge && ego && (
+        <ReceiptSheet
+          edge={receiptEdge}
+          fromName={
+            ego.nodes.find((n) => n.artistId === receiptEdge.from)
+              ?.displayName ?? "?"
+          }
+          toName={
+            ego.nodes.find((n) => n.artistId === receiptEdge.to)?.displayName ??
+            "?"
+          }
+          onClose={() => setReceiptEdge(null)}
+        />
+      )}
     </main>
   );
 }

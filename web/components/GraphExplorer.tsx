@@ -27,11 +27,22 @@ export function GraphExplorer({
   hoodIndexOf,
   onNodeClick,
   onEdgeClick,
+  trim = true,
+  labelRule,
+  warmupTicks,
+  cooldownTicks,
+  mapMode,
 }: {
   data: EgoNetwork;
   hoodIndexOf: (neighborhoodId: string | undefined) => number | undefined;
   onNodeClick: (artistId: string) => void;
   onEdgeClick?: (edge: EgoEdge) => void;
+  // Ego views trim non-focus edges; the city map pre-trims server-side.
+  trim?: boolean;
+  labelRule?: (node: GraphNode, globalScale: number) => boolean;
+  warmupTicks?: number;
+  cooldownTicks?: number;
+  mapMode?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -62,7 +73,7 @@ export function GraphExplorer({
     const interEdges = data.edges
       .filter((e) => e.from !== data.focus && e.to !== data.focus)
       .sort((a, b) => b.weight - a.weight)
-      .slice(0, MAX_INTER_EDGES);
+      .slice(0, trim ? MAX_INTER_EDGES : Infinity);
     const links: GraphLink[] = [...focusEdges, ...interEdges].map((e) => ({
       source: e.from,
       target: e.to,
@@ -72,7 +83,7 @@ export function GraphExplorer({
     }));
     const maxSpins = Math.max(1, ...data.nodes.map((n) => n.spinCount));
     return { nodes, links, maxSpins };
-  }, [data, hoodIndexOf]);
+  }, [data, hoodIndexOf, trim]);
 
   return (
     <div ref={containerRef} className="h-full w-full touch-none">
@@ -85,6 +96,10 @@ export function GraphExplorer({
           maxSpins={maxSpins}
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
+          labelRule={labelRule}
+          warmupTicks={warmupTicks}
+          cooldownTicks={cooldownTicks}
+          mapMode={mapMode}
         />
       )}
     </div>
