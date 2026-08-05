@@ -6,13 +6,18 @@
   "type": "module",
   "scripts": {
     "session": "tsx src/index.ts",
-    "check": "tsx src/resolve.selfcheck.ts",
-    "typecheck": "tsc --noEmit"
+    "check": "tsx src/resolve.selfcheck.ts && tsx src/graph/coplay.selfcheck.ts",
+    "typecheck": "tsc --noEmit",
+    "graph": "tsx src/graph/build.ts",
+    "graph:verify": "tsx src/graph/verify.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",
     "@modelcontextprotocol/sdk": "^1.20.0",
-    "convex": "^1.31.0"
+    "convex": "^1.31.0",
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "graphology-metrics": "^2.4.0"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

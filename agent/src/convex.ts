@@ -131,6 +131,75 @@ export class LinerNotesClient {
     return this.client.mutation(anyApi.steward.markItem, { id, status, runId });
   }
 
+  // ── Graph build (M3) ─────────────────────────────────────────────────
+
+  catalogArtists(): Promise<
+    {
+      _id: string;
+      mbid?: string;
+      displayName: string;
+      rawNames: string[];
+      genres: string[];
+      mbRelations: { type: string; targetMbid: string; targetName: string }[];
+    }[]
+  > {
+    return this.client.query(anyApi.graph.catalogArtists, {});
+  }
+
+  async clearGraph(): Promise<{ deleted: number }> {
+    let deleted = 0;
+    // Chunked server-side deletes; loop until the mutation reports done.
+    for (;;) {
+      const result = (await this.client.mutation(anyApi.graph.clearGraph, {})) as {
+        deleted: number;
+        done: boolean;
+      };
+      deleted += result.deleted;
+      if (result.done) return { deleted };
+    }
+  }
+
+  insertNeighborhoods(items: { name: string; description?: string }[]): Promise<string[]> {
+    return this.client.mutation(anyApi.graph.insertNeighborhoods, { items });
+  }
+
+  insertNodes(
+    items: {
+      artistId: string;
+      spinCount: number;
+      firstAired?: number;
+      lastAired?: number;
+      stations: string[];
+      neighborhoodId?: string;
+      bridgeScore?: number;
+    }[]
+  ): Promise<number> {
+    return this.client.mutation(anyApi.graph.insertNodes, { items });
+  }
+
+  insertEdges(
+    items: {
+      fromArtistId: string;
+      toArtistId: string;
+      type: string;
+      weight: number;
+      receipt: Record<string, unknown>;
+    }[]
+  ): Promise<number> {
+    return this.client.mutation(anyApi.graph.insertEdges, { items });
+  }
+
+  graphStats(): Promise<{
+    nodes: number;
+    edges: number;
+    edgesByType: Record<string, number>;
+    neighborhoods: number;
+    nodesWithBridgeScore: number;
+    nodesWithNeighborhood: number;
+  }> {
+    return this.client.query(anyApi.graph.graphStats, {});
+  }
+
   judgePlays(): Promise<
     {
       artistRaw: string;

@@ -261,22 +261,25 @@ export class DataHubGms {
     const reportSection =
       `\n\n---\n\n**Latest steward run report — ${stamp} UTC (run \`${runId}\`)**\n\n${report}\n\n` +
       `_Written by the Liner Notes steward agent after each stewardship session._`;
-    const documented: string[] = [];
-    for (const [name, staticDescription] of Object.entries(DATASET_DESCRIPTIONS)) {
+    const entries = Object.entries(DATASET_DESCRIPTIONS).map(([name, staticDescription]) => ({
+      name,
+      description: staticDescription + reportSection,
+    }));
+    await this.documentDatasets(entries);
+    return entries.map((e) => e.name);
+  }
+
+  // Write full Documentation-tab content for arbitrary datasets (used by the
+  // graph build to attach its build summary to the graph tables).
+  async documentDatasets(entries: { name: string; description: string }[]): Promise<void> {
+    for (const entry of entries) {
       await this.graphql(
         `mutation updateDescription($input: DescriptionUpdateInput!) {
           updateDescription(input: $input)
         }`,
-        {
-          input: {
-            description: staticDescription + reportSection,
-            resourceUrn: datasetUrn(name),
-          },
-        }
+        { input: { description: entry.description, resourceUrn: datasetUrn(entry.name) } }
       );
-      documented.push(name);
     }
-    return documented;
   }
 
   // Idempotent: registers the steward as a corpuser (so the owner chip resolves

@@ -1,0 +1,22 @@
+scanning plays for independent recount...
+32882 resolved plays
+
+=== Curation edge spot-checks (stored weight vs independent brute-force recount) ===
+✓ "Thundercat" ↔ "Micah Emrich": stored=14 brute-force=14 stations=88nine,hyfin example=2026-05-01T00:46:27.159Z
+    real co-play: 88nine 2026-05-21T20:48:58.594Z & 2026-05-21T20:14:29.311Z (34min apart)
+✓ "Thundercat" ↔ "Erykah Badu": stored=203 brute-force=203 stations=hyfin,rhythmlab example=2026-04-24T00:11:06.551Z
+    real co-play: rhythmlab 2026-06-16T11:17:52.299Z & 2026-06-16T12:07:36.230Z (50min apart)
+✓ "Micah Emrich" ↔ "Holy Pinto": stored=97 brute-force=97 stations=414music example=2026-04-24T04:02:47.744Z
+    real co-play: 414music 2026-07-26T08:23:02.714Z & 2026-07-26T08:01:26.712Z (22min apart)
+✓ "SZA" ↔ "Elli Ingram": stored=10 brute-force=10 stations=rhythmlab example=2026-05-05T13:56:39.788Z
+    real co-play: rhythmlab 2026-05-30T19:12:17.989Z & 2026-05-30T18:34:18.219Z (38min apart)
+✓ "B. Bravo" ↔ "The Quilz": stored=0 brute-force=0 (below noise floor — correctly absent)
+
+=== Canonical edge spot-checks (vs MusicBrainz) ===
+✓ "Dinner Party" —[member of band]→ "Terrace Martin"
+    verify: https://musicbrainz.org/artist/7345d55f-8b2c-4471-8727-ec46c9244115 ↔ https://musicbrainz.org/artist/47d06156-05af-420e-8835-be50353a5d52
+✓ "Liv Mueller" —[member of band]→ "The Dark Horse Project"
+    verify: https://musicbrainz.org/artist/60c2395a-966a-4754-ad2e-219b2154624c ↔ https://musicbrainz.org/artist/245cbdf6-df5d-49c8-81e0-40c6055b5aa8
+
+VERIFY_DONE
+EXIT:0
