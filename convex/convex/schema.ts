@@ -11,6 +11,7 @@ const resolution = v.object({
   confidence: v.number(), // 0..1
   evidence: v.string(),
   runId: v.optional(v.id("stewardRuns")),
+  resolvedAt: v.optional(v.number()), // ms epoch
 });
 
 const edgeReceipt = v.object({
@@ -71,6 +72,16 @@ export default defineSchema({
     deezerId: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     resolution: v.optional(resolution),
+    // MusicBrainz artist-artist relationships, kept for M3's canonical edges.
+    mbRelations: v.optional(
+      v.array(
+        v.object({
+          type: v.string(),
+          targetMbid: v.string(),
+          targetName: v.string(),
+        })
+      )
+    ),
   })
     .index("by_mbid", ["mbid"])
     .index("by_displayName", ["displayName"]),
@@ -99,6 +110,7 @@ export default defineSchema({
     ),
     status: v.string(), // "pending" | "approved" | "rejected"
     approvedMbid: v.optional(v.string()),
+    adjudicatorNote: v.optional(v.string()), // Claude's reasoning when it routed here
     runId: v.optional(v.id("stewardRuns")),
   }).index("by_status", ["status"]),
 
@@ -114,7 +126,10 @@ export default defineSchema({
     rawArtist: v.string(),
     playCount: v.number(),
     stationSlugs: v.array(v.string()),
-    status: v.string(), // "pending" | "deferred" | "resolved" | "review"
+    topTitle: v.optional(v.string()), // most-played raw title for this artist
+    firstPlayedAt: v.optional(v.number()), // ms epoch, era signal for scoring
+    lastPlayedAt: v.optional(v.number()),
+    status: v.string(), // "pending" | "deferred" | "resolved" | "review" | "ignored"
     attempts: v.number(),
     lastRunId: v.optional(v.id("stewardRuns")),
     updatedAt: v.number(),

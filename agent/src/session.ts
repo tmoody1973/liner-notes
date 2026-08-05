@@ -1,15 +1,29 @@
 // Copyright 2026 Radio Milwaukee / Liner Notes contributors
 // SPDX-License-Identifier: Apache-2.0
+import { adjudicate } from "./adjudicate.js";
 import { LinerNotesClient } from "./convex.js";
 import { DataHubMcp, summarizeAssertions } from "./datahub.js";
+import { enrichOne } from "./enrich.js";
 import { phaseBanner, say } from "./narrate.js";
 import { writeReport } from "./report.js";
+import { resolveItem, type ScoredCandidate } from "./resolve.js";
 import { detectMode, readPlays, type SourceMode } from "./source.js";
 import { buildWorklist } from "./worklist.js";
 
 const SOURCE_PLAYS_DATASET = "rm-playlist-v2.plays";
 
-export async function runSession(explicitMode?: string): Promise<void> {
+const toReviewCandidates = (scored: ScoredCandidate[]) =>
+  scored.map((s) => ({
+    mbid: s.candidate.mbid,
+    name: s.candidate.name,
+    evidence: s.evidence,
+    score: Number(s.total.toFixed(3)),
+  }));
+
+export async function runSession(
+  explicitMode?: string,
+  { maxItems }: { maxItems?: number } = {}
+): Promise<void> {
   const mode: SourceMode = detectMode(explicitMode);
   const linerNotes = new LinerNotesClient();
   const datahub = new DataHubMcp();
@@ -67,29 +81,135 @@ export async function runSession(explicitMode?: string): Promise<void> {
     say(`  ${String(entry.playCount).padStart(4)} plays · "${entry.rawArtist}" · ${entry.stationSlugs.join(", ")}`);
   }
 
-  // ── 3/4. RESOLVE + ENRICH ──────────────────────────────────────────────
+  // ── 3. RESOLVE ─────────────────────────────────────────────────────────
+  phaseBanner("resolve");
   const counts: Record<string, number> = {};
-  for (const phase of ["resolve", "enrich"] as const) {
-    phaseBanner(phase);
-    if (phase === "enrich") {
-      say("enrichment operates on resolved artists — nothing resolved yet (resolver lands in MOO-462)");
-      continue;
-    }
-    while (!interrupted) {
-      const pending = await linerNotes.pendingItems(500);
-      if (pending.length === 0) break;
-      say(`${pending.length} pending work items in this batch`);
-      for (const item of pending) {
-        if (interrupted) break;
-        // ponytail: chassis handler defers every item; MOO-462 replaces this
-        // with MusicBrainz/Discogs/Deezer resolution + confidence buckets.
+  const bump = (key: string) => (counts[key] = (counts[key] ?? 0) + 1);
+  const { requeued } = await linerNotes.requeueDeferred();
+  if (requeued > 0) say(`${requeued} previously deferred items requeued for retry`);
+  const topTitleByRaw = new Map(worklist.map((w) => [w.rawArtist, w.topTitle]));
+
+  let processed = 0;
+  let capped = false;
+  resolveLoop: while (!interrupted && !capped) {
+    const pending = await linerNotes.pendingItems(500);
+    if (pending.length === 0) break;
+    say(`${pending.length} pending work items in this batch`);
+    for (const item of pending) {
+      if (interrupted) break resolveLoop;
+      if (maxItems !== undefined && processed >= maxItems) {
+        say(`--max-items=${maxItems} reached — remaining items stay pending`);
+        capped = true;
+        break;
+      }
+      processed += 1;
+      const label = `"${item.rawArtist}" (${item.playCount} plays)`;
+      try {
+        const decision = await resolveItem(item);
+        if (decision.kind === "ignore") {
+          await linerNotes.markItem(item._id, "ignored", runId);
+          bump("ignored");
+          say(`${label} → ignored: ${decision.reason}`);
+        } else if (decision.kind === "auto") {
+          const { best, method } = decision;
+          await linerNotes.applyResolution({
+            workItemId: item._id,
+            rawArtist: item.rawArtist,
+            mbid: best.candidate.mbid,
+            displayName: best.candidate.name,
+            method,
+            confidence: Number(best.total.toFixed(3)),
+            evidence: `auto-applied (${method}): ${best.evidence}`,
+            runId,
+          });
+          bump("autoApplied");
+          say(`${label} → ✔ ${best.candidate.name} [${best.candidate.mbid}] auto (${best.evidence})`);
+        } else if (decision.kind === "adjudicate") {
+          say(`${label} → ambiguous (top ${decision.scored[0].total.toFixed(2)}), asking Claude...`);
+          const verdict = await adjudicate(item, decision.scored);
+          if (verdict?.decision === "apply" && verdict.mbid) {
+            const chosen = decision.scored.find((s) => s.candidate.mbid === verdict.mbid)!;
+            await linerNotes.applyResolution({
+              workItemId: item._id,
+              rawArtist: item.rawArtist,
+              mbid: verdict.mbid,
+              displayName: chosen.candidate.name,
+              method: "llm",
+              confidence: verdict.confidence,
+              evidence: `Claude adjudication: ${verdict.reasoning} (scores: ${chosen.evidence})`,
+              runId,
+            });
+            bump("llmApplied");
+            say(`  Claude → apply ${chosen.candidate.name}: ${verdict.reasoning}`);
+          } else if (verdict?.decision === "ignore") {
+            await linerNotes.markItem(item._id, "ignored", runId);
+            bump("ignored");
+            say(`  Claude → ignore: ${verdict.reasoning}`);
+          } else {
+            await linerNotes.queueReview({
+              workItemId: item._id,
+              rawArtist: item.rawArtist,
+              candidates: toReviewCandidates(decision.scored),
+              adjudicatorNote: verdict?.reasoning,
+              runId,
+            });
+            bump("review");
+            say(`  Claude → review${verdict ? `: ${verdict.reasoning}` : " (adjudication unavailable)"}`);
+          }
+        } else {
+          await linerNotes.queueReview({
+            workItemId: item._id,
+            rawArtist: item.rawArtist,
+            candidates: toReviewCandidates(decision.scored),
+            runId,
+          });
+          bump("review");
+          say(
+            `${label} → review queue (${decision.scored.length === 0 ? "no MusicBrainz candidates" : `top score ${decision.scored[0].total.toFixed(2)}`})`
+          );
+        }
+      } catch (error) {
         await linerNotes.markItem(item._id, "deferred", runId);
-        counts.deferred = (counts.deferred ?? 0) + 1;
-        say(`"${item.rawArtist}" (${item.playCount} plays) → deferred (resolver not implemented yet)`);
+        bump("deferred");
+        say(`${label} → deferred (${(error as Error).message.slice(0, 120)})`);
       }
     }
-    if (interrupted) say("stopping early — remaining items stay pending for the next session");
   }
+  if (interrupted) say("stopping early — remaining items stay pending for the next session");
+
+  // ── 4. ENRICH ──────────────────────────────────────────────────────────
+  phaseBanner("enrich");
+  const enrichFailed = new Set<string>();
+  while (!interrupted) {
+    const batch = (await linerNotes.artistsNeedingEnrichment(100)).filter(
+      (a) => !enrichFailed.has(a._id)
+    );
+    if (batch.length === 0) break;
+    say(`${batch.length} resolved artists awaiting enrichment`);
+    for (const artist of batch) {
+      if (interrupted) break;
+      const topTitle = artist.rawNames
+        .map((raw) => topTitleByRaw.get(raw))
+        .find((t) => t !== undefined);
+      try {
+        const result = await enrichOne(artist, topTitle, linerNotes);
+        if (result) {
+          bump("enriched");
+          say(
+            `${artist.displayName} → ${result.genres} genres, ${result.relations} relations` +
+              `${result.image ? ", image" : ""}${result.isrc ? `, ISRC` : ""}` +
+              `${result.releaseYear ? `, ${result.releaseYear}` : ""}`
+          );
+        } else {
+          enrichFailed.add(artist._id);
+        }
+      } catch (error) {
+        enrichFailed.add(artist._id);
+        say(`${artist.displayName} → enrichment failed (${(error as Error).message.slice(0, 120)})`);
+      }
+    }
+  }
+  if (counts.enriched === undefined) say("no artists awaiting enrichment");
 
   // ── 5. DOCUMENT ────────────────────────────────────────────────────────
   phaseBanner("document");

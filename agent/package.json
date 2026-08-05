@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "session": "tsx src/index.ts",
+    "check": "tsx src/resolve.selfcheck.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

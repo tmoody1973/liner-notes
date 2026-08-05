@@ -13,8 +13,26 @@ export type WorkItem = {
   rawArtist: string;
   playCount: number;
   stationSlugs: string[];
+  topTitle?: string;
+  firstPlayedAt?: number;
+  lastPlayedAt?: number;
   status: string;
   attempts: number;
+};
+
+export type ReviewCandidate = {
+  mbid: string;
+  name: string;
+  evidence: string;
+  score: number;
+};
+
+export type Artist = {
+  _id: string;
+  mbid?: string;
+  displayName: string;
+  rawNames: string[];
+  genres?: string[];
 };
 
 export class LinerNotesClient {
@@ -33,9 +51,59 @@ export class LinerNotesClient {
   }
 
   seedWorklist(
-    items: { rawArtist: string; playCount: number; stationSlugs: string[] }[]
+    items: {
+      rawArtist: string;
+      playCount: number;
+      stationSlugs: string[];
+      topTitle?: string;
+      firstPlayedAt?: number;
+      lastPlayedAt?: number;
+    }[]
   ): Promise<{ created: number; seen: number }> {
     return this.client.mutation(anyApi.steward.seedWorklist, { items });
+  }
+
+  requeueDeferred(): Promise<{ requeued: number }> {
+    return this.client.mutation(anyApi.steward.requeueDeferred, {});
+  }
+
+  applyResolution(args: {
+    workItemId: string;
+    rawArtist: string;
+    mbid: string;
+    displayName: string;
+    method: string;
+    confidence: number;
+    evidence: string;
+    runId: string;
+  }): Promise<string> {
+    return this.client.mutation(anyApi.steward.applyResolution, args);
+  }
+
+  queueReview(args: {
+    workItemId: string;
+    rawArtist: string;
+    candidates: ReviewCandidate[];
+    adjudicatorNote?: string;
+    runId: string;
+  }): Promise<null> {
+    return this.client.mutation(anyApi.steward.queueReview, args);
+  }
+
+  artistsNeedingEnrichment(limit?: number): Promise<Artist[]> {
+    return this.client.query(anyApi.steward.artistsNeedingEnrichment, { limit });
+  }
+
+  enrichArtist(args: {
+    artistId: string;
+    genres: string[];
+    imageUrl?: string;
+    deezerId?: string;
+    discogsId?: string;
+    mbRelations?: { type: string; targetMbid: string; targetName: string }[];
+    track?: { title: string; isrc?: string; releaseYear?: number };
+  }): Promise<null> {
+    return this.client.mutation(anyApi.steward.enrichArtist, args);
   }
 
   pendingItems(limit?: number): Promise<WorkItem[]> {
@@ -50,7 +118,15 @@ export class LinerNotesClient {
     return this.client.mutation(anyApi.steward.markItem, { id, status, runId });
   }
 
-  judgePlays(): Promise<{ artistRaw: string; stationSlug: string; enrichmentStatus: string }[]> {
+  judgePlays(): Promise<
+    {
+      artistRaw: string;
+      titleRaw?: string;
+      playedAt?: number;
+      stationSlug: string;
+      enrichmentStatus: string;
+    }[]
+  > {
     return this.client.query(anyApi.steward.judgePlays, {});
   }
 }

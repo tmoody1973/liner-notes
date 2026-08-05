@@ -11,6 +11,8 @@ export type SourceMode = "real" | "judge";
 
 export interface PlayRecord {
   artistRaw: string;
+  titleRaw?: string;
+  playedAt?: number;
   stationSlug: string;
   enrichmentStatus: string;
 }
@@ -51,7 +53,13 @@ export async function readPlays(
     const params = new URLSearchParams({ tableName: "plays" });
     if (cursor) params.set("cursor", cursor);
     const snapshot = await politeFetchJson<{
-      values: { artistRaw?: string; stationId?: string; enrichmentStatus?: string }[];
+      values: {
+        artistRaw?: string;
+        titleRaw?: string;
+        playedAt?: number;
+        stationId?: string;
+        enrichmentStatus?: string;
+      }[];
       cursor?: string;
       hasMore: boolean;
     }>(`${base}/api/list_snapshot?${params}`, { headers });
@@ -60,6 +68,8 @@ export async function readPlays(
       if (!play.artistRaw) continue;
       plays.push({
         artistRaw: play.artistRaw,
+        titleRaw: play.titleRaw,
+        playedAt: play.playedAt,
         stationSlug: stationSlugById.get(play.stationId ?? "") ?? "unknown",
         enrichmentStatus: play.enrichmentStatus ?? "pending",
       });
