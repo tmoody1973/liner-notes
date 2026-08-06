@@ -56,16 +56,18 @@ Everything below runs on an anonymized sample dataset: real artist names (so
 entity resolution genuinely works), synthetic play history across the four real
 stations, deliberately messy strings included.
 
-**Prerequisites:** Node 20+, Docker, Python 3.9–3.12, [uv](https://docs.astral.sh/uv/),
-a free [Convex](https://convex.dev) account, an `ANTHROPIC_API_KEY` (the agent's
-judgment calls). Optional: `DISCOGS_TOKEN` (enrichment), `PERPLEXITY_API_KEY`
-(editorial edges).
+**Prerequisites:** Node 20+, Docker (for the DataHub quickstart), Python
+3.9–3.12, [uv](https://docs.astral.sh/uv/), a free [Convex](https://convex.dev)
+account, an `ANTHROPIC_API_KEY` (the agent's judgment calls). Optional:
+`DISCOGS_TOKEN` (enrichment), `PERPLEXITY_API_KEY` (editorial edges).
 
 ```sh
-# 1. Install and create your Convex deployment
+# 1. Install, sign in to Convex, and create your deployment
+#    (log in first — the connector step needs a deploy key, and Convex
+#     can't mint one for an anonymous local deployment)
 npm install
 cp .env.example .env.local            # fill in ANTHROPIC_API_KEY at minimum
-cd convex && npx convex dev --once && cd ..
+cd convex && npx convex login && npx convex dev --once && cd ..
 
 # 2. Seed the sample dataset
 npm run seed
@@ -73,20 +75,23 @@ npm run seed
 # 3. DataHub up + ingest your deployment's metadata
 cd connector
 uv venv --python 3.11 .venv
-uv pip install -p .venv/bin/python -e .
+uv pip install -p .venv/bin/python -e .   # first install downloads ~67MB of wheels
 .venv/bin/datahub docker quickstart    # UI at http://localhost:9002 (datahub/datahub)
-export CONVEX_URL='https://<your-deployment>.convex.cloud'   # from convex/.env.local
-export CONVEX_LINER_NOTES_DEPLOY_KEY='<npx convex deployment token create>'
+export CONVEX_URL='<CONVEX_URL from ../convex/.env.local>'
+export CONVEX_LINER_NOTES_DEPLOY_KEY="$(cd ../convex && npx convex deployment token create judge | tail -1)"
 .venv/bin/datahub ingest -c recipes/convex.judge.yml
 cd ..
 
 # 4. Run a steward session (narrated; watch it orient → detect → resolve → document)
+#    Writes its assertions/incidents to YOUR quickstart (DATAHUB_GMS_URL
+#    defaults to http://localhost:8080).
 npm run steward -- --mode=judge
 
 # 5. Build the influence graph from the resolved catalog
 npm run graph -- --mode=judge
 
-# 6. Explore
+# 6. Point the web app at your deployment, then explore
+grep '^CONVEX_URL' convex/.env.local | sed 's/^CONVEX_URL/NEXT_PUBLIC_CONVEX_URL/' > web/.env.local
 npm --workspace web run dev            # http://localhost:3000
 ```
 

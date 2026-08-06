@@ -1,0 +1,399 @@
+================================================================================
+LINER NOTES — CLEAN-CLONE JUDGE-PATH TEST (MOO-474)
+================================================================================
+Date:        2026-08-05 (session 19:37–20:05 local, America/Chicago)
+Machine:     macOS Darwin 25.3.0, arm64 (Apple Silicon)
+Toolchain:   node v26.0.0 · npm 11.12.1 · uv 0.12.1 · Python 3.11.13 (uv-managed)
+             acryl-datahub 1.7.0 · convex CLI 1.31.x (from clone) · Next.js 16.3.0
+Work dir:    <scratchpad>/clean-clone/liner-notes
+Clone:       https://github.com/tmoody1973/liner-notes.git @ 625367b
+             ("docs: submission package pass 1 — README overhaul ...")
+
+WHAT WAS TESTED
+  A judge following ONLY the public README's "Try it — judge mode" section, in
+  its listed order, from a fresh clone. Every command below is the README's own
+  command unless explicitly marked DEVIATION. Outputs are verbatim (trimmed);
+  secret values are redacted.
+
+TWO DELIBERATE DEVIATIONS (both to protect a live production demo)
+  1. DataHub GMS at :18080, not the quickstart's :8080.
+     `datahub docker quickstart` was NOT run — local disk is nearly full and a
+     DataHub v1.7.0 instance is already running remotely, reachable through an
+     SSH tunnel on localhost:18080. The steward's DataHub phases were pointed at
+     :18080 via DATAHUB_GMS_URL. A judge on a clean machine would run the
+     quickstart and use the default :8080; everything the agent does is
+     port-agnostic, so this substitutes cleanly.
+  2. Connector ingest was run with --dry-run and a file sink, never a real
+     ingest. Reason: the judge recipe's URNs collide with the production
+     deployment's URNs; a real ingest against the live GMS would overwrite
+     production metadata before the demo. --dry-run exercises the full source
+     (schema discovery, row counts, containers, profiles) and skips all sink
+     writes.
+     Sub-deviation: DataHub constructs the sink even during --dry-run, so the
+     recipe's `datahub-rest`/:8080 sink was swapped for a local `file` sink to
+     guarantee zero traffic to any DataHub instance. Source config was untouched.
+
+HONESTY NOTES (things that make this less than a perfect judge simulation)
+  * This machine was already logged in to Convex (~/.convex/config.json exists).
+    A true judge would not be. In practice this did not matter — see step 4;
+    the CLI never asked to log in and chose an anonymous local deployment.
+  * uv's package cache was warm, so the connector install took 1.9s. A judge
+    downloads ~67MB of wheels; expect 1–3 minutes.
+  * Steps 7 and 8 (steward, graph) write back to the GMS they are pointed at.
+    Because they were pointed at :18080, this run DID write to the live
+    production DataHub: four assertion run-events with judge-mode numbers, plus
+    graph lineage/summary aspects. This was not anticipated when the test was
+    scoped as "read-only orient". See FINDING 6.
+
+================================================================================
+STEP 1 — git clone                                                        [PASS]
+================================================================================
+$ git clone https://github.com/tmoody1973/liner-notes.git
+Cloning into 'liner-notes'...
+  real 1.09s · 17MB working tree
+
+================================================================================
+STEP 2 — npm install                                                      [PASS]
+================================================================================
+$ npm install
+added 493 packages, and audited 497 packages in 8s
+found 0 vulnerabilities
+  real 8.2s · exit 0
+  No peer-dep warnings, no engine warnings on node 26.
+
+================================================================================
+STEP 3 — cp .env.example .env.local + ANTHROPIC_API_KEY                   [PASS]
+================================================================================
+$ cp .env.example .env.local
+$ (ANTHROPIC_API_KEY written programmatically from the production .env.local)
+ANTHROPIC_API_KEY written, length=108, prefix=sk-ant-[REDACTED]
+
+================================================================================
+STEP 4 — cd convex && npx convex dev --once                               [PASS]
+================================================================================
+$ cd convex && npx convex dev --once   < /dev/null   (no TTY, nothing typed)
+Setting up a new project...
+Downloading Convex backend binary
+✔ Configured a local deployment for http://127.0.0.1:3210 and saved its:
+    name as CONVEX_DEPLOYMENT
+    client URL as CONVEX_URL
+    HTTP actions URL as CONVEX_SITE_URL
+ to .env.local
+▌ Developing against deployment:
+▌ [Local] Port 3210 • No Convex account (run npx convex login to link to a project)
+▌ └─ http://127.0.0.1:3210
+✔ Added table indexes:  [16 indexes across artists, workItems, sourcePlays, graphEdges, ...]
+✔ 19:38:43 Convex functions ready! (263.07ms)
+  real 8.2s · exit 0
+
+  RESULT: no login prompt, no interactive question. The CLI silently chose an
+  ANONYMOUS LOCAL deployment at http://127.0.0.1:3210. It did not need the free
+  Convex account the README lists as a prerequisite.
+  Cosmetic: "View the Convex dashboard at null".
+  Consequence: CONVEX_URL is a localhost URL, not the https://<name>.convex.cloud
+  the later steps assume. See FINDINGS 1–3.
+
+  $ cat convex/.env.local
+  CONVEX_DEPLOYMENT=anonymous:anonymous-convex
+  CONVEX_URL=http://127.0.0.1:3210
+  CONVEX_SITE_URL=http://127.0.0.1:3211
+
+================================================================================
+STEP 5 — npm run seed                                                     [PASS]
+================================================================================
+$ npm run seed
+> convex run seed:run
+[CONVEX ?(seed:run)] [LOG] 'Seeded judge-mode sample data:' '{"stations":4,"plays":220,"events":6}'
+{ "events": 6, "plays": 220, "stations": 4 }
+  real 1.3s · exit 0
+
+================================================================================
+STEP 6 — connector install + judge recipe validation             [PASS w/ gaps]
+================================================================================
+$ cd connector && uv venv --python 3.11 .venv
+Using CPython 3.11.13
+Creating virtual environment at: .venv
+  real 0.17s · exit 0
+
+$ uv pip install -p .venv/bin/python -e .
+[... 100+ wheels: acryl-datahub, avro, requests, ruamel-yaml, sentry-sdk ...]
+  real 1.9s (WARM CACHE — a judge should expect 1–3 min) · exit 0 · .venv = 67MB
+
+$ ./.venv/bin/datahub --version
+acryl-datahub, version 1.7.0
+$ ./.venv/bin/datahub check plugins | grep -i convex
+convex                                          <- entry point registers correctly
+
+--- deploy key: BLOCKED on the README's own happy path ---------------------
+$ npx convex deployment token create            (README line 79, .env.example line 18)
+error: missing required argument 'name'
+Usage: convex deployment token create <name> ...
+  -> the documented command is incomplete; the CLI requires a name argument.
+
+$ npx convex deployment token create judge-test
+✖ Cannot create a deploy key for a anonymous deployment.
+  exit 1
+  -> HARD BLOCK. Step 4's anonymous local deployment cannot mint a deploy key at
+     all. A judge following the README in order cannot complete the ingest step
+     without first running `npx convex login` and re-provisioning a cloud
+     deployment. See FINDING 1.
+
+--- DEVIATION: proceeded using the local deployment's admin key ------------
+  The local backend stores an adminKey in convex/.convex/local/default/config.json.
+  The connector sends `Authorization: Convex <key>`, which the local backend
+  accepts, so the admin key substitutes for a deploy key.
+  Also required: `npx convex dev` must be RUNNING — `--once` exits and takes the
+  backend on :3210 down with it, so nothing is listening when the connector runs.
+
+$ (background) npx convex dev            # to keep 127.0.0.1:3210 listening
+$ export CONVEX_URL='http://127.0.0.1:3210'
+$ export CONVEX_LINER_NOTES_DEPLOY_KEY='[REDACTED — local adminKey]'
+$ ./.venv/bin/datahub ingest -c <recipe with sink swapped to file> --dry-run
+
+Source (convex) report: 'failures': [], 'warnings': [], 'infos': []
+Aspects by Subtypes:
+| Aspect               | container (Convex Deployment) | dataset (Table) |
+| browsePathsV2        |                             1 |              15 |
+| container            |                             0 |              15 |
+| containerProperties  |                             1 |               0 |
+| dataPlatformInstance |                             1 |               0 |
+| datasetProfile       |                             0 |              15 |
+| datasetProperties    |                             0 |              15 |
+| schemaMetadata       |                             0 |              15 |
+| status               |                             1 |              15 |
+| subTypes             |                             1 |              15 |
+Sink (file) report: {'total_records_written': 0, ...}       <- dry run, as intended
+Pipeline finished successfully; produced 0 events in 1.73 seconds.
+  real 4.6s · exit 0
+
+  RESULT: the connector itself is healthy — it discovered the deployment
+  container and all 15 seeded tables, mapped schemas, and produced profiles
+  (exact row counts) with zero failures and zero warnings. What fails on the
+  judge path is credential acquisition, not the connector.
+  NOT RUN: `datahub docker quickstart` (guardrail) and the real
+  `datahub ingest -c recipes/convex.judge.yml` (guardrail).
+
+================================================================================
+STEP 7 — npm run steward -- --mode=judge                         [PASS w/ bug]
+================================================================================
+$ (added to .env.local, DEVIATION) DATAHUB_GMS_URL=http://localhost:18080
+$ curl -s http://localhost:18080/config      # read-only reachability check
+{ "models": {}, "patchCapable": true, "versions": { "acryldata/datahub": "v1.7...
+
+$ npm run steward -- --mode=judge
+Liner Notes steward session — source mode: judge
+  run record kx71vtfm0b16y38xeq4axa0gz98bzw5j opened in Convex
+
+━━━ 1/5 ORIENT ━━━
+  connecting to DataHub via MCP Server (uvx mcp-server-datahub)...
+  MCP session up — server exposes: search, get_lineage, get_dataset_queries,
+    get_entities, list_schema_fields, get_lineage_paths_between,
+    search_documents, grep_documents
+  search("platform:convex") → 31 datasets in the context graph
+  source backlog dataset: rm-playlist-v2.plays
+  assertion state: 4 assertions from the previous session — Resolution coverage:
+    SUCCESS (coveragePct=63.6 ...); Duplicate review rows: SUCCESS; Enrichment
+    coverage: SUCCESS (100.0); Resolution coverage target: FAILURE (63.6 < 80)
+
+━━━ 2/5 DETECT ━━━
+  220 plays scanned
+  91 distinct raw artist strings need stewardship
+  worklist seeded: 91 new work items (0 already queued — idempotent upsert)
+  prioritized worklist (top 10 by airplay):
+       6 plays · "lex allen" · 414music
+       5 plays · "roots" · 88nine, hyfin
+       5 plays · "Lex Allen" · 414music
+       5 plays · "WebsterX" · 414music, hyfin
+       4 plays · "little dragon" · 88nine, rhythmlab
+       4 plays · "BURNA BOY" · hyfin
+       4 plays · "Silk Sonic (Bruno Mars & Anderson .Paak)" · hyfin
+       [messy-string variants present as designed]
+
+━━━ 3/5 RESOLVE ━━━
+  91 pending work items in this batch
+  "lex allen" (6 plays) → ambiguous (top 0.88), asking Claude...
+    Claude → apply Lex Allen: Lex Allen is a well-known Milwaukee soul/pop
+    artist, consistent with the 414 Music local rotation. [...]
+  "roots" (5 plays) → ✔ The Roots [80b3cf5e-...] auto
+    (name 1.00 · mb 1.00 · xcheck 0.00 · genre 1.00 · era 1.00 → 0.85)
+  "BURNA BOY" (4 plays) → ✔ Burna Boy [78a19169-...] auto (... → 1.00)
+  "M. Kiwanuka" (1 plays) → ambiguous (top 0.81), asking Claude...
+    Claude → apply Michael Kiwanuka: "You Ain't the Problem" is a track from
+    Michael Kiwanuka's 2019 album KIWANUKA [...]
+  [~91 lines total; auto-match + Claude adjudication both exercised]
+
+━━━ 4/5 ENRICH ━━━
+  41 resolved artists awaiting enrichment
+  The Roots → 6 genres, 10 relations, image, 1999
+  Little Simz → 2 genres, 2 relations, image, ISRC, 2021
+  Lex Allen → enrichment skipped (414music-only local artist)
+  [41 lines; ran without DISCOGS_TOKEN, which is documented as optional]
+
+━━━ 5/5 DOCUMENT ━━━
+  asking Claude to write the run report...
+  run record kx71vtfm0b16y38xeq4axa0gz98bzw5j closed
+  Run report: "This session ran in judge mode and completed a full scan of 220
+    recent plays, which surfaced 91 distinct artists [...] 70 were matched and
+    applied automatically, another 15 were resolved with help from the language
+    model [...] Metadata for 31 datasets was published to DataHub, and the four
+    data-quality checks from the previous session mostly came back clean [...]"
+  work queue now: {"resolved":85,"review":6,"total":91}
+  writing the session's work back into DataHub...
+    assertion PASS · Resolution coverage (resolvedWorkItems=85 totalWorkItems=91
+      coveragePct=93.4 thresholdPct=50)
+    assertion PASS · Resolution coverage target (coveragePct=93.4 thresholdPct=80)
+    assertion PASS · Duplicate review rows (duplicatePendingReviewRows=0)
+    assertion PASS · Enrichment coverage (coveragePct=100.0 thresholdPct=80)
+  write-back degraded (DataHub unreachable?): GMS GraphQL: Validation error
+    (VariableTypeMismatch@[updateIncidentStatus]) : Variable 'input' of type
+    'UpdateIncidentStatusInput!' used in position expecting t[TRUNCATED BY AGENT]
+
+  real 7m57s · exit 0 (exit code 0 despite the degraded write-back)
+  Four assertion results DID land in the live GMS. The incident-status mutation
+  failed — see FINDINGS 5 and 6.
+
+================================================================================
+STEP 8 — npm run graph -- --mode=judge                                    [PASS]
+================================================================================
+$ npm run graph -- --mode=judge
+━━━ LOAD ━━━  41 resolved artists · 220 plays scanned · 210 map to resolved (95.5%)
+━━━ NODES ━━━ 41 artists with airplay become graph nodes
+━━━ EDGES ━━━ curation: 14 co-played pairs → 14 edges (≥1 co-play within 60min)
+              canonical: 2 MusicBrainz relationship edges
+━━━ NEIGHBORHOODS ━━━ Louvain found 26 communities; 5 with ≥2 artists
+    #1 Brady Street Crossfade (6) — "A block-party shuffle where Tyler's swagger,
+       Sylvan Esso's synths, and Wilco's twang all share the same sidewalk."
+    #2 Bronzeville Verses (3)  #3 Walnut Street Soul (6)
+    #4 Big Gig Main Stage (2)  #5 Third Ward Nightglow (3)
+━━━ WRITE ━━━ cleared previous graph (0 rows); wrote 41 nodes, 16 edges, 5 hoods
+━━━ DOCUMENT ━━━
+  documenting the build in DataHub (lineage + summary)...
+    lineage: artists + plays → graphNodes/graphEdges/neighborhoods
+  independent graphStats check: {"nodes":41,"edges":16,
+    "edgesByType":{"canonical":2,"curation":14},"neighborhoods":5,
+    "nodesWithBridgeScore":41,"nodesWithNeighborhood":20}
+  real 20.0s · exit 0
+
+================================================================================
+STEP 9 — web app                                              [FAIL as written]
+================================================================================
+--- 9a. exactly as the README says (port changed to 3100 per guardrail) ---
+$ npm --workspace web run dev -- --port 3100
+▲ Next.js 16.3.0 (Turbopack)
+- Local:  http://localhost:3100
+✓ Ready in 627ms
+
+$ curl -s http://localhost:3100
+HTTP=500 bytes=27678
+
+Server log:
+⨯ Error: No address provided to ConvexReactClient.
+If trying to deploy to production, make sure to follow all the instructions
+found at https://docs.convex.dev/production/hosting/
+If running locally, make sure to run `convex dev` and ensure the .env.local
+file is populated.
+    at <unknown> (app/providers.tsx:9:11)
+   9 |     () => new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+ GET / 500 in 1931ms
+
+  The README's last judge step fails outright on a clean clone. NEXT_PUBLIC_
+  CONVEX_URL is required by web/app/providers.tsx but appears nowhere in the
+  README, nowhere in .env.example, and is not written by any earlier step
+  (`npx convex dev` writes CONVEX_URL into convex/.env.local; Next.js only
+  reads web/.env.local). See FINDING 4.
+
+--- 9b. after the undocumented step a judge must guess ---
+$ printf 'NEXT_PUBLIC_CONVEX_URL=http://127.0.0.1:3210\n' > web/.env.local
+$ npm --workspace web run dev -- --port 3100
+- Environments: .env.local
+✓ Ready in 319ms
+$ curl -s http://localhost:3100
+HTTP=200 bytes=18499
+ GET / 200 in 295ms
+
+  Rendered shell (tags stripped):
+    <title>Liner Notes</title>
+    "Liner Notes · Radio Milwaukee · Explore · Pathfinder · Neighborhoods ·
+     About · The station's musical brain, made explorable. Four stations'
+     airplay, turned into an influence graph — every connection with its
+     receipt. · Most played on air · Built on four stations' airplay — every
+     connection carries its receipt. · About this data"
+    6 nav links present.
+  The app itself is healthy. Only the missing env var is at fault.
+
+================================================================================
+CLEANUP
+================================================================================
+$ pkill -f "next dev --port 3100"        # the dev server this test started
+$ pkill -f convex-local-backend          # the convex dev this test started
+Verified afterwards: nothing listening on :3100 or :3210.
+Untouched and still listening, as required: :3000 (node 60778), :8080
+(Python 31338), :8888 (bun 780), :9002 and :18080 (ssh 1033).
+No Docker container was started at any point.
+
+================================================================================
+README ASSET CHECK (links a judge would click)
+================================================================================
+OK   docs/architecture.svg          OK   docs/samples/  (5 entries + screenshots/)
+OK   docs/evidence/                 OK   connector/README.md
+OK   .env.example                   OK   LICENSE (Apache 2.0)
+OK   scripts/verify-source.mjs
+
+================================================================================
+FINDINGS (README gaps — reported, not fixed)
+================================================================================
+1. [BLOCKER] Step 1 and step 3 contradict each other. `npx convex dev --once`
+   creates an ANONYMOUS LOCAL deployment (http://127.0.0.1:3210), but step 3
+   says `export CONVEX_URL='https://<your-deployment>.convex.cloud'` and needs a
+   deploy key — and Convex refuses: "Cannot create a deploy key for a anonymous
+   deployment." The judge path dead-ends at the ingest step.
+
+2. [BLOCKER] `npx convex deployment token create` (README line 79, .env.example
+   line 18, connector/README.md line ~23, recipes/convex.judge.yml header) is
+   missing its required argument: "error: missing required argument 'name'".
+
+3. [HIGH] `npx convex dev --once` exits and stops the local backend. Anything
+   that talks to CONVEX_URL afterwards (the connector) needs `npx convex dev`
+   left running in another terminal. The README never says so.
+
+4. [BLOCKER] `npm --workspace web run dev` returns HTTP 500 on a clean clone:
+   "Error: No address provided to ConvexReactClient." NEXT_PUBLIC_CONVEX_URL is
+   undocumented and uncreated. web/.env.local must exist.
+
+5. [MEDIUM] The steward's DataHub write-back fails on incidents against GMS
+   v1.7.0: "Validation error (VariableTypeMismatch@[updateIncidentStatus]) :
+   Variable 'input' of type 'UpdateIncidentStatusInput!' used in position
+   expecting t..." — agent/src/governance.ts:340. The error is mislabelled
+   "DataHub unreachable?" (it was reachable; assertions wrote fine) and is
+   truncated at ~200 chars, hiding the expected type. Session still exits 0.
+
+6. [MEDIUM] Steps 7 and 8 write to whatever GMS they are pointed at, with no
+   judge-mode guard. In this run that meant the live production DataHub received
+   four judge-mode assertion results (coveragePct=93.4 over 91 items) and graph
+   lineage aspects. Judges on their own quickstart are unaffected; anyone
+   re-running this against a shared instance is not.
+
+7. [LOW] The run report says "Metadata for 31 datasets was published to
+   DataHub." The session published nothing; 31 is the count orient READ from the
+   existing graph (and the judge's own deployment has 15 tables, not 31).
+
+8. [LOW] SONOVAULT_API_KEY is read by agent/src/sonovault.ts but is absent from
+   .env.example, which the README calls the complete credential list.
+
+9. [LOW] Prerequisites list "a free Convex account" and "Docker"; neither was
+   needed for steps 1–2 and 4–5 (anonymous local mode covers Convex). Docker is
+   only needed for DataHub.
+
+10. [LOW/COSMETIC] `npx convex dev --once` prints "View the Convex dashboard at
+    null" in anonymous mode.
+
+11. [LOW/HOUSEKEEPING] `_build_plan/` (internal milestone prompts and logs,
+    prd.html) ships in the public repo and is not mentioned in the README's
+    "What's here" table.
+
+================================================================================
+SUMMARY:  7 of 9 steps pass as written.
+          Step 6 (ingest) and step 9 (web app) are blocked for a judge who
+          follows the README literally. Everything the project actually builds —
+          connector, steward, graph, app — works.
+================================================================================
