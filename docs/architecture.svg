@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 620" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowAccent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="980" height="620" rx="12" fill="#0f172a"/>
+  <text x="32" y="44" fill="#f8fafc" font-size="22" font-weight="700">Liner Notes — how the pieces fit</text>
+  <text x="32" y="68" fill="#94a3b8" font-size="13">Messy radio playout logs in → a governed, explorable artist-influence graph out. DataHub is the control tower in the middle.</text>
+
+  <!-- 1. Source -->
+  <g>
+    <rect x="32" y="100" width="200" height="120" rx="10" fill="#1e293b" stroke="#334155"/>
+    <text x="48" y="128" fill="#f8fafc" font-size="14" font-weight="700">1 · Radio playout data</text>
+    <text x="48" y="150" fill="#cbd5e1" font-size="12">4 Radio Milwaukee stations</text>
+    <text x="48" y="168" fill="#cbd5e1" font-size="12">~1M plays, artist names typed</text>
+    <text x="48" y="186" fill="#cbd5e1" font-size="12">by hand — typos, aliases,</text>
+    <text x="48" y="204" fill="#cbd5e1" font-size="12">"feat." strings, duplicates</text>
+  </g>
+
+  <!-- 2. Connector -->
+  <g>
+    <rect x="32" y="260" width="200" height="96" rx="10" fill="#1e293b" stroke="#334155"/>
+    <text x="48" y="288" fill="#f8fafc" font-size="14" font-weight="700">2 · Connector (Python)</text>
+    <text x="48" y="310" fill="#cbd5e1" font-size="12">Custom Convex → DataHub</text>
+    <text x="48" y="328" fill="#cbd5e1" font-size="12">ingestion source: schemas,</text>
+    <text x="48" y="346" fill="#cbd5e1" font-size="12">row counts, lineage</text>
+  </g>
+
+  <!-- 3. DataHub hub -->
+  <g>
+    <rect x="330" y="120" width="300" height="240" rx="12" fill="#134e4a" stroke="#2dd4bf" stroke-width="1.5"/>
+    <text x="350" y="152" fill="#f0fdfa" font-size="16" font-weight="700">3 · DataHub (control tower)</text>
+    <text x="350" y="178" fill="#99f6e4" font-size="12">Knows every dataset, and whether</text>
+    <text x="350" y="194" fill="#99f6e4" font-size="12">the data can be trusted right now:</text>
+    <text x="360" y="222" fill="#ccfbf1" font-size="12">• Assertions — pass/fail quality checks</text>
+    <text x="360" y="242" fill="#ccfbf1" font-size="12">• Incidents — open when checks go red</text>
+    <text x="360" y="262" fill="#ccfbf1" font-size="12">• Lineage — where every table came from</text>
+    <text x="360" y="282" fill="#ccfbf1" font-size="12">• Glossary + domains — shared vocabulary</text>
+    <text x="360" y="302" fill="#ccfbf1" font-size="12">• Run reports — the agent's paper trail</text>
+    <text x="350" y="336" fill="#5eead4" font-size="11" font-style="italic">The agent reads all of this via the official</text>
+    <text x="350" y="352" fill="#5eead4" font-size="11" font-style="italic">DataHub MCP Server — and writes back results.</text>
+  </g>
+
+  <!-- 4. Steward agent -->
+  <g>
+    <rect x="720" y="120" width="228" height="240" rx="12" fill="#312e81" stroke="#818cf8" stroke-width="1.5"/>
+    <text x="740" y="152" fill="#eef2ff" font-size="16" font-weight="700">4 · Steward agent</text>
+    <text x="740" y="172" fill="#c7d2fe" font-size="12">(Claude, TypeScript)</text>
+    <text x="750" y="200" fill="#e0e7ff" font-size="12">orient — read DataHub state</text>
+    <text x="750" y="220" fill="#e0e7ff" font-size="12">detect — build worklist</text>
+    <text x="750" y="240" fill="#e0e7ff" font-size="12">resolve — match artists vs</text>
+    <text x="765" y="256" fill="#a5b4fc" font-size="11">MusicBrainz + judgment</text>
+    <text x="750" y="276" fill="#e0e7ff" font-size="12">enrich — Discogs, links</text>
+    <text x="750" y="296" fill="#e0e7ff" font-size="12">document — report + write</text>
+    <text x="765" y="312" fill="#a5b4fc" font-size="11">assertions back to DataHub</text>
+    <text x="740" y="344" fill="#a5b4fc" font-size="11" font-style="italic">Every claim keeps its receipt.</text>
+  </g>
+
+  <!-- 5. Graph -->
+  <g>
+    <rect x="330" y="420" width="300" height="120" rx="10" fill="#1e293b" stroke="#334155"/>
+    <text x="350" y="448" fill="#f8fafc" font-size="14" font-weight="700">5 · Influence graph</text>
+    <text x="350" y="470" fill="#cbd5e1" font-size="12">604 artists · 39,674 edges</text>
+    <text x="350" y="488" fill="#cbd5e1" font-size="12">Co-play edges from airplay history +</text>
+    <text x="350" y="506" fill="#cbd5e1" font-size="12">editorial edges from cited music journalism</text>
+    <text x="350" y="524" fill="#cbd5e1" font-size="12">(Perplexity, quote + source on each edge)</text>
+  </g>
+
+  <!-- 6. App -->
+  <g>
+    <rect x="720" y="420" width="228" height="120" rx="10" fill="#7c2d12" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="740" y="448" fill="#fff7ed" font-size="14" font-weight="700">6 · Discovery app (Next.js)</text>
+    <text x="740" y="470" fill="#fed7aa" font-size="12">Explorer · pathfinder · playlists</text>
+    <text x="740" y="488" fill="#fed7aa" font-size="12">city map · live events · every edge</text>
+    <text x="740" y="506" fill="#fed7aa" font-size="12">tap opens its receipt: the quote,</text>
+    <text x="740" y="524" fill="#fed7aa" font-size="12">source, and confidence behind it</text>
+  </g>
+
+  <!-- Arrows -->
+  <!-- source -> connector -->
+  <line x1="132" y1="220" x2="132" y2="260" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- connector -> datahub -->
+  <line x1="232" y1="308" x2="330" y2="280" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="240" y="278" fill="#64748b" font-size="11">ingest metadata</text>
+  <!-- datahub <-> agent (bidirectional, accent) -->
+  <line x1="630" y1="210" x2="720" y2="210" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAccent)"/>
+  <line x1="720" y1="260" x2="630" y2="260" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAccent)"/>
+  <text x="638" y="200" fill="#fbbf24" font-size="11">reads state (MCP)</text>
+  <text x="640" y="282" fill="#fbbf24" font-size="11">writes results</text>
+  <!-- agent -> graph -->
+  <line x1="780" y1="360" x2="600" y2="420" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="662" y="412" fill="#94a3b8" font-size="11">clean catalog feeds the graph</text>
+  <!-- graph -> app -->
+  <line x1="630" y1="480" x2="720" y2="480" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- graph -> datahub (governed too) -->
+  <line x1="480" y1="420" x2="480" y2="360" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <text x="492" y="396" fill="#5eead4" font-size="11">graph tables are governed too</text>
+
+  <text x="32" y="596" fill="#64748b" font-size="11">Loop: agent fixes data → DataHub assertions turn green (or open honest incidents) → graph rebuilds on clean data → listeners see receipts, not vibes.</text>
+</svg>

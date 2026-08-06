@@ -1,46 +1,109 @@
 # Liner Notes
 
-Radio Milwaukee's four stations' airplay history, turned into an explorable,
-DataHub-governed artist-influence knowledge graph — by an autonomous steward
-agent that shows its receipts.
+**Apache 2.0** · Built for **Build with DataHub: The Agent Hackathon** (Track 1 — Agents That Do Real Work)
 
-Built for **Build with DataHub: The Agent Hackathon** (Track 1 — Agents That
-Do Real Work). Licensed under **[Apache 2.0](./LICENSE)**.
+Radio Milwaukee's four stations have logged about a million song plays, with
+artist names typed by hand: typos, aliases, "feat." strings, duplicates.
+Liner Notes turns that messy playout history into an explorable,
+DataHub-governed artist-influence knowledge graph — cleaned by an autonomous
+steward agent that shows a receipt for every claim it makes.
 
-## What's here
+![Architecture: connector ingests playout data into DataHub; the steward agent reads DataHub state via MCP and writes results back; the clean catalog feeds an influence graph that powers the discovery app](./docs/architecture.svg)
 
-| Directory | What it is |
-|---|---|
-| `convex/` | The Liner Notes Convex deployment: schema (resolved catalog, steward records, influence graph, playlists) + judge-mode seed |
-| `connector/` | Convex → DataHub ingestion source, Python — see [connector/README.md](./connector/README.md) |
-| `agent/` | The steward agent, TypeScript — `npm run steward` runs a narrated session (orient via DataHub MCP → detect → resolve → enrich → document) |
-| `web/` | The listener discovery app, Next.js (Milestone 4) |
-| `scripts/` | `verify-source.mjs` — read-only smoke test against the source deployment |
+## The problem
 
-## Setup
+Radio playout systems are where music data goes to rot. DJs type artist names
+live, under time pressure, across decades of software migrations. "Erykah Badu",
+"Badu, Erykah", and "Erykah Badu feat. Common" are three different strings for
+the station's database — so nobody can answer "what have we actually played?"
+without a cleanup no one has time to do by hand. Every station, podcast network,
+and music library has a version of this table.
+
+## How it works
+
+1. **Connector (Python)** — a custom [Convex](https://convex.dev) ingestion
+   source for DataHub: schemas, exact row counts, and lineage for every table,
+   recipe-driven like official sources. See [connector/README.md](./connector/README.md).
+2. **DataHub** is the control tower. It holds the datasets' schemas and lineage,
+   plus the governance surface the agent works against: **assertions** (pass/fail
+   quality checks like "resolution coverage ≥ 80%"), **incidents** (opened
+   honestly when a check goes red), a **glossary and domains** (shared
+   vocabulary), and the agent's **run reports**.
+3. **Steward agent (TypeScript + Claude)** — each session narrates five phases:
+   *orient* (reads DataHub state through the official
+   [DataHub MCP Server](https://docs.datahub.com/docs/features/feature-guides/mcp)),
+   *detect* (builds a worklist of unresolved plays), *resolve* (matches artist
+   strings against MusicBrainz, with Claude adjudicating the ambiguous ones),
+   *enrich* (Discogs profiles, streaming links), and *document* (persists a run
+   report and writes assertion results **back** to DataHub). One Convex mutation
+   per item, so a killed session resumes without double-applying.
+4. **Influence graph** — 604 artists, 39,674 edges from two sources: co-play
+   history (which artists share airtime) and editorial edges mined from cited
+   music journalism via Perplexity, each carrying its quote, source, and
+   confidence.
+5. **Discovery app (Next.js)** — search, a force-graph explorer, an
+   influence pathfinder, generated playlists, a neighborhood "city map", and
+   live-event cards. Tapping any edge opens its receipt: where the claim came
+   from and how sure we are.
+
+The loop: the agent fixes data → DataHub's assertions turn green (or open real
+incidents when they don't) → the graph rebuilds on clean data → listeners see
+receipts, not vibes.
+
+## Try it — judge mode (no private data needed)
+
+Everything below runs on an anonymized sample dataset: real artist names (so
+entity resolution genuinely works), synthetic play history across the four real
+stations, deliberately messy strings included.
+
+**Prerequisites:** Node 20+, Docker, Python 3.9–3.12, [uv](https://docs.astral.sh/uv/),
+a free [Convex](https://convex.dev) account, an `ANTHROPIC_API_KEY` (the agent's
+judgment calls). Optional: `DISCOGS_TOKEN` (enrichment), `PERPLEXITY_API_KEY`
+(editorial edges).
 
 ```sh
+# 1. Install and create your Convex deployment
 npm install
-cp .env.example .env.local        # fill in what you have (see below)
-cd convex && npx convex dev --once  # creates/links your Convex deployment, pushes schema
-cd ..
-```
+cp .env.example .env.local            # fill in ANTHROPIC_API_KEY at minimum
+cd convex && npx convex dev --once && cd ..
 
-### Judge mode (no private data required)
-
-The repo runs without Radio Milwaukee's private airplay data. One command
-seeds your Convex deployment with an anonymized sample dataset — real artist
-names (so entity resolution genuinely works), synthetic play history across
-the four real stations, deliberately messy artist strings included:
-
-```sh
+# 2. Seed the sample dataset
 npm run seed
+
+# 3. DataHub up + ingest your deployment's metadata
+cd connector
+uv venv --python 3.11 .venv
+uv pip install -p .venv/bin/python -e .
+.venv/bin/datahub docker quickstart    # UI at http://localhost:9002 (datahub/datahub)
+export CONVEX_URL='https://<your-deployment>.convex.cloud'   # from convex/.env.local
+export CONVEX_LINER_NOTES_DEPLOY_KEY='<npx convex deployment token create>'
+.venv/bin/datahub ingest -c recipes/convex.judge.yml
+cd ..
+
+# 4. Run a steward session (narrated; watch it orient → detect → resolve → document)
+npm run steward -- --mode=judge
+
+# 5. Build the influence graph from the resolved catalog
+npm run graph -- --mode=judge
+
+# 6. Explore
+npm --workspace web run dev            # http://localhost:3000
 ```
 
-Then open the Convex dashboard (`npx convex dashboard` from `convex/`) and
-browse `sourcePlays`, `sourceStations`, `sourceEvents`.
+Optional extras once the above works: `npm run governance` (domains, glossary,
+tags, structured properties, incidents in DataHub), `npm run editorial`
+(cited editorial edges; needs `PERPLEXITY_API_KEY`), `npm run sync:events`
+(live-event matching from the seeded events table).
 
-### Real mode (Radio Milwaukee source data)
+## Sample outputs (no setup required)
+
+[`docs/samples/`](./docs/samples/) holds real artifacts from production runs
+against Radio Milwaukee's data: a steward run report, the full narrated
+editorial session log, a generated playlist, and DataHub screenshots
+(assertions, lineage, an honest ACTIVE incident). Evidence screenshots from
+every milestone live in [`docs/evidence/`](./docs/evidence/).
+
+## Real mode (Radio Milwaukee source data)
 
 Set `CONVEX_SOURCE_URL` and `CONVEX_SOURCE_DEPLOY_KEY` in `.env.local`
 (read-only deploy key, scope `deployment:data:view`), then prove the
@@ -49,26 +112,27 @@ connection:
 ```sh
 npm run verify:source
 # Source deployment reachable. 18 tables: ...
-# plays: 5120+ rows (stopped after 5 pages; more exist).
 ```
 
-## Steward agent sessions
+## What's here
 
-With DataHub up (see `connector/README.md`) and the connector ingest run once:
-
-```sh
-npm run steward                  # real mode if source keys are set, else judge mode
-npm run steward -- --mode=judge  # force judge mode (sample data, no private keys)
-```
-
-Each session narrates five phases — **orient** (reads schemas, assertion state, and
-prior run reports from DataHub via the official MCP Server), **detect** (builds the
-prioritized worklist from unresolved plays), **resolve/enrich** (works the queue —
-one Convex mutation per item, so a killed session resumes without double-applying),
-and **document** (run record + a Claude-written report persisted to `stewardRuns`).
-Requires `uv` (for `uvx mcp-server-datahub`) and Node 20+.
+| Directory | What it is |
+|---|---|
+| `connector/` | Convex → DataHub ingestion source (Python) — [its README](./connector/README.md) has the recipe format and tests |
+| `agent/` | Steward agent + graph builder + editorial/events/governance jobs (TypeScript) |
+| `convex/` | Liner Notes deployment: schema, judge-mode seed |
+| `web/` | Discovery app (Next.js) |
+| `docs/samples/` | Real run artifacts for judges |
+| `scripts/` | `verify-source.mjs` — read-only source smoke test |
 
 ## Credentials
 
 Every credential the project uses is documented in [.env.example](./.env.example).
-Nothing is required for judge mode except a free Convex account.
+Judge mode needs only a free Convex account plus an Anthropic API key.
+
+## License
+
+[Apache 2.0](./LICENSE). The connector is structured for upstream submission
+to DataHub — the source registers via the standard
+`datahub.ingestion.source.plugins` entry point and runs against a stock
+quickstart.

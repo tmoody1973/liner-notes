@@ -12,6 +12,10 @@
   "scripts": {
     "seed": "npm --workspace convex run seed",
     "verify:source": "node scripts/verify-source.mjs",
-    "steward": "npm --workspace agent run session --"
+    "steward": "npm --workspace agent run session --",
+    "graph": "npm --workspace agent run graph --",
+    "editorial": "npm --workspace agent run editorial --",
+    "sync:events": "npm --workspace agent run sync:events",
+    "governance": "npm --workspace agent run governance"
   }
 }
