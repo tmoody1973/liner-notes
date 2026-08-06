@@ -2,8 +2,9 @@
 
 **Apache 2.0** · Built for **Build with DataHub: The Agent Hackathon** (Track 1 — Agents That Do Real Work) · **Live demo: [liner-notes-pi.vercel.app](https://liner-notes-pi.vercel.app)**
 
-Radio Milwaukee's four stations have logged about a million song plays, with
-artist names typed by hand: typos, aliases, "feat." strings, duplicates.
+Radio Milwaukee's four stations log every song a DJ plays — 168,921 plays in
+the fifteen weeks since the current playout platform went live, artist names
+typed by hand: typos, aliases, "feat." strings, duplicates.
 Liner Notes turns that messy playout history into an explorable,
 DataHub-governed artist-influence knowledge graph — cleaned by an autonomous
 steward agent that shows a receipt for every claim it makes.

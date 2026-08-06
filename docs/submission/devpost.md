@@ -9,14 +9,15 @@
 
 ## Elevator pitch (200 chars)
 
-An AI steward agent cleans 20 years of hand-typed radio playout logs, governed
+An AI steward agent cleans Radio Milwaukee's hand-typed playout logs, governed
 end-to-end in DataHub — and turns them into a music discovery graph where every
 connection shows its receipt.
 
 ## Inspiration
 
-Radio Milwaukee's four stations have logged roughly a million song plays, with
-artist names typed live by DJs: typos, aliases, "feat." strings, duplicates.
+Radio Milwaukee's four stations log every song a DJ plays — 168,921 plays in
+fifteen weeks on the current playout platform, artist names typed live by DJs:
+typos, aliases, "feat." strings, duplicates.
 "Erykah Badu", "Badu, Erykah", and "Erykah Badu feat. Common" are three
 different artists to the database. Nobody can answer "what have we actually
 played?" — and every station, podcast network, and music library has a version

@@ -17,7 +17,7 @@
     <rect x="32" y="100" width="200" height="120" rx="10" fill="#1e293b" stroke="#334155"/>
     <text x="48" y="128" fill="#f8fafc" font-size="14" font-weight="700">1 · Radio playout data</text>
     <text x="48" y="150" fill="#cbd5e1" font-size="12">4 Radio Milwaukee stations</text>
-    <text x="48" y="168" fill="#cbd5e1" font-size="12">~1M plays, artist names typed</text>
+    <text x="48" y="168" fill="#cbd5e1" font-size="12">168,921 plays in 15 weeks, typed</text>
     <text x="48" y="186" fill="#cbd5e1" font-size="12">by hand — typos, aliases,</text>
     <text x="48" y="204" fill="#cbd5e1" font-size="12">"feat." strings, duplicates</text>
   </g>
