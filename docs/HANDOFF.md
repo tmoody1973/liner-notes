@@ -1,53 +1,41 @@
-# Handoff — Liner Notes (DataHub Agent Hackathon) → next: M5 (editorial, live, ship)
+# Handoff — Liner Notes (DataHub Agent Hackathon) → next: finish MOO-474 (submission package)
 
-**Updated 2026-08-05 ~17:00 CDT.** **M1–M4 are COMPLETE** — MOO-459…471 all Done with evidence comments + attachments; milestone logs written for all four (`_build_plan/milestones/*/milestone-log.md`). The discovery app is live at `localhost:3000` (dev server usually already running — check before starting another; a stale one on port 3000 belongs to this repo). Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1) — do the job properly, don't cut corners.
+**Updated 2026-08-05 ~19:05 CDT.** M1–M4 complete; M5 features complete: **MOO-472 (editorial edges), MOO-473 (see-them-live), MOO-475 (DataHub governance surface) all Done** with evidence + attachments. **MOO-474 (submission package) is In Progress** — public repo pushed, everything else remains. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1).
 
-## Next actions (in order)
+## MOO-474 — what's done / what remains (in order)
 
-1. **M5:** MOO-472 (editorial edges via Perplexity — typed, cited connections), MOO-473 (see-them-live cards + badges), MOO-474 (submission package: README, sub-3-min video, sample outputs, connector PR, Devpost). Read `_build_plan/milestones/5-editorial-live-ship/prompt.md` first (plan mode + Tarik's confirmation, per pattern).
-2. Workflow stays `linear-build` (align → In Progress → build → verify vs real data → Done + evidence comment). Load `claude-api` before touching agent LLM code; Perplexity key is in root `.env.local` (`PERPLEXITY_API_KEY` — verify name before use).
+**Done:** full-history secret scan (clean; only `.env.example` ever tracked) → public repo created + pushed: **https://github.com/tmoody1973/liner-notes** (Apache 2.0 in repo; description set).
 
-## M4 (done) — what M5 consumes
+**Remaining:**
+1. **README overhaul** (root): what/why, architecture (connector → DataHub ⇄ steward agent → graph → app), copy-paste judge setup (DataHub quickstart → `npm run seed` judge data → connector ingest → `npm run steward -- --mode=judge` → `npm run graph -- --mode=judge` → web app), Apache 2.0 prominent. Existing `connector/README.md` is already polished — link it.
+2. **Sample outputs** `docs/samples/`: a real run report (pull from `stewardRuns.report` via `npx convex data stewardRuns`), the editorial session summary (in `/tmp/editorial-run.log` — copy before reboot!), a generated playlist markdown (playlists `k973pjytk1870q7gw2x9p7qxjh8bxqnf` via `playlists:get`), DataHub screenshots (reuse `docs/evidence/moo464-*` + `m5-datahub-*`).
+3. **Demo-prep:** re-run connector ingest (updates stale row counts on graph tables — they show 0 from pre-graph ingest); `connector/.venv` py3.11, recipe unchanged, sink via tunnel.
+4. **Clean-clone test:** fresh clone from GitHub into scratchpad, follow README judge path (anonymous local `npx convex dev` + seed + judge session + web). Save transcript to `docs/evidence/m5-clean-clone.txt`. DataHub steps validated against the running instance (local disk ~16GB — don't start a second quickstart).
+5. **Connector upstream PR:** research current DataHub community-source contribution path, prepare branch + PR text, open DRAFT PR from Tarik's gh account (`tmoody1973`), link on MOO-474.
+6. **Demo video — Tarik's call: I produce it end-to-end.** Invoke the **`hyperframes` skill first** (mandatory video entry point) + `elevenlabs-tts` for VO. Storyboard (per issue, <3:00): 0:00–0:20 problem (messy playout data) → 0:20–1:10 agent works (terminal narration, DataHub beats: assertions, lineage, incident, glossary/domains) → 1:10–2:20 app payoff (search → explorer → receipt tap → pathfinder → playlist → city map → editorial receipt → event card) → 2:20–2:55 loop + OSS ask. Raw footage: Playwright screen captures (browser already logged into DataHub at localhost:9002 datahub/datahub) + a fresh `npm run session -- --mode=real` terminal capture (idempotent, safe). Show final MP4 duration <3:00.
+7. **Devpost draft** `docs/submission/devpost.md` + YouTube upload (Tarik's Chrome via claude-in-chrome, or hand off) + Devpost form; screenshots as evidence.
 
-- **Web app** (`web/`, Next 16 + Tailwind 4 + Convex `anyApi`, dark "music city" theme): `/` search+featured, `/artist/[id]` (ego explorer, receipts on edge tap, trust chip, previews, streaming buttons, bridge badge + cross-the-bridge), `/pathfinder` (Dijkstra path + receipts + max-flow strength; 3+ artists = intersection), `/playlist/[id]` (stable URLs, per-track "why", take-it-with-you links), `/neighborhoods` (city map + cards + bridge roster), `/about`, `/review` (operator, untouched).
-- **Editorial-ready by design (MOO-472 is mostly agent work):** `ReceiptSheet` renders the editorial type (quote/citation/confidence) already; `EDGE_COLORS.editorial` defined; schema `graphEdges.receipt` has quote/citationUrl/relationType/confidence fields since M1. Insert `type:"editorial"` rows into `graphEdges` and the UI shows them everywhere. **After writing edges, refresh the server snapshot** (`/api/path?refresh=1` etc., or restart dev) — it caches per process.
-- **Traversals** live in `web/lib/traversal.ts` (Stell-R Appendix A: K-BFS+coherence, Dijkstra 1/(w+1), max-flow, intersection) against `web/lib/graph-store.ts` in-memory snapshot (paged via `app:nodesPage`/`edgesPage`). Self-checks in `npm run check` (agent workspace runs them).
-- **Media backfill:** `npm run backfill:links` (agent) — SonoVault (key in `.env.local`) + Deezer (keyless). Current coverage: 363 tracks → 208 previews, 209 deezer, 132 ISRCs filled. Idempotent + disk-cached; re-run after any new tracks appear.
-- **Convex additions:** `app.ts` (artistIndex/artistPanel/egoNetwork/neighborhoodList/nodesPage/edgesPage/trackIndex), `playlists.ts` (+ `playlists.why` in schema), `steward.tracksForBackfill`/`setTrackMedia`.
-- Bridge threshold 0.5 (`web/lib/palette.ts BRIDGE_THRESHOLD`); station filter applies to curation edges only (canonical always visible).
-- Track titles: some are raw playout strings — optional M5 polish note in the M4 milestone log.
+## M5 features (done) — quick reference
 
-## M3 graph (unchanged — DON'T rebuild before the demo)
+- **Editorial (MOO-472):** `npm run editorial` (agent) — sonar-pro, 50-artist cap, registry-filtered; 65 edges live (44 collab / 16 influenced / 5 compared); receipts render (blue edges; ReceiptSheet quote+citation+confidence). Responses disk-cached → re-runs free. `editorial:stats` for counts. After inserting edges: refresh web snapshot via any `/api/*?refresh=1`.
+- **Events (MOO-473):** `npm run sync:events` (full resync; 35 rows / 23 artists). EventCard + LiveSoonBadge + emerald node dots. Display dedupes TM/AXS duplicates.
+- **Governance (MOO-475):** `npm run governance` — domains (13+18 datasets), 9 glossary terms, 5 tags, 8 structured properties w/ live stats, incidents wired to assertions (also runs in every session's DOCUMENT phase). **4th assertion added:** resolution ≥80% *target* — honestly RED at 63.7% → real ACTIVE incident on plays ("Steward: Resolution coverage target failing"). It auto-resolves when review triage crosses 80% — if Tarik triages `/review` (304 pending) past that, capture the RESOLVED screenshot for MOO-475's honesty note.
 
-- 604 nodes, 39,609 edges (39,594 curation + 15 canonical), 4 neighborhoods (Bronzeville Beat Loop 175 / Riverwest Synth Blocks 282 / Walker's Point Neo-Soul 66 / Bay View Indie Row 63), bridges: Twan Mack 1.0, Immortal Girlfriend, B Free, NILEXNILE…
-- `npm run graph -- --mode=real` rebuilds (~4 min) but **names regenerate same-spirit not verbatim** — the app + evidence reference current names; don't rebuild between rehearsal and recording.
-- Convex scale rule (bit twice): >32k-doc queries must paginate; mutations cap at 4096 reads. New M5 edge inserts: reuse `graph:insertEdges` (chunked).
+## Environment state (critical)
 
-## DataHub on Linode (LIVE — workspace instance)
+- **GMS tunnel: local port 18080** (`DATAHUB_GMS_URL=http://localhost:18080` now in root `.env.local`) — **local 8080 is occupied by Tarik's newsdesk.server (PID ~31338, don't kill)**. Tunnel cmd: `ssh -fN -L 18080:localhost:8080 -L 9002:localhost:9002 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 root@172.236.98.82`. Tunnels die quietly — verify with a GraphQL curl before blaming code.
+- DataHub UI localhost:9002 (datahub/datahub; Playwright Chrome session already logged in). VM `102316033` — **delete after submission**.
+- Web dev server on port 3000 (long-running); Convex `dev:dusty-crocodile-663`; graph NOT rebuilt (names frozen); 604 nodes / 39,674 edges (incl. 65 editorial).
+- `/tmp/editorial-run.log` holds the full editorial session narration — copy into docs/samples before it's lost.
 
-- VM id `102316033`, IP `172.236.98.82`, ~$0.072/hr — **delete after submission** (`linode-cli linodes delete 102316033`). Creds in root `.env.local` (`DATAHUB_VM_*`); SSH key `~/.ssh/id_ed25519`.
-- Reached via tunnel (`ssh -fN -L 9002:localhost:9002 -L 8080:localhost:8080 root@172.236.98.82`) → UI `localhost:9002` (datahub/datahub), GMS `localhost:8080`. **If DataHub "disappears", rerun the tunnel.** Judges run local quickstart — unaffected.
-- Write-back client: `agent/src/gms.ts` (stable assertion URNs on rm-playlist-v2.plays; lineage; docs; owners). GraphQL gotcha: custom type label at `info { customAssertion { type } }` — introspect, don't guess. M5 editorial sessions should document themselves via the same client (session.ts DOCUMENT phase pattern).
+## Gotchas added this session
 
-## Current data/system state
-
-- Backlog drained (0 pending / 672 resolved / 304 review / 79 ignored of 1,055); all three assertions GREEN (63.7% / 0 / 100%). `npm run session -- --mode=real` is idempotent — safe to run for demo footage.
-- Catalog: 613 artists all enriched; 363 tracks (media coverage above). `/review` has ~304 pending — optional phone triage.
-- Convex: liner-notes `dev:dusty-crocodile-663`; source `precise-fish-444` read-only.
-- Standing rules: 414music-only artists skip external enrichment; station branding strings ignored; source read-only; no audio features; `_build_plan/` never imported by code; SonoVault > song.link.
-
-## Env & tooling gotchas (hard-won)
-
-- Playwright MCP: screenshots save to repo root (or path given); `browser_run_code_unsafe` with `page.mouse` works for canvas taps (hover first, then click — force-graph needs pointer tracking). Modal open checks via screenshot, not innerText (races).
-- react-force-graph-2d: `next/dynamic` doesn't forward refs → inner client component owns the ref (`ForceGraphInner`). Map mode needs weak link strength + charge −60, warmup 300 ticks, and percentile-based zoomToFit (outliers otherwise shrink the city). minZoom must be low (0.05).
-- Tailwind 4 CSS vars in arbitrary values: `from-(--hood-0)` (parens), NOT v3's `from-[--hood-0]` — the v3 form silently renders nothing.
-- Convex CLI `npx convex data/run` from `convex/` workspace; plain `npx convex dev --once` deploys — confirm `.env.local` says `dev:dusty-crocodile-663`.
-- MusicBrainz 1.1s/req; SonoVault 1.1s; Deezer 150ms — all via `agent/src/polite.ts` (cache `agent/.cache/`). Don't run two agent sessions concurrently.
-- Python 3.14 too new for acryl-datahub → `connector/.venv` (py3.11). VM runs py3.12.
-- Linear attachments: prepare (exact `stat -f%z` size) → curl PUT with ALL signed headers verbatim → finalize; one file at a time, 60s URL expiry.
-- `.agents/`, `.claude/`, `skills-lock.json` untracked — decide at M5 whether to gitignore.
-- Tarik's disk ~16GB free.
+- Perplexity via `polite.ts` (now supports POST); `/chat/completions` endpoint works; response_format json_schema accepted on sonar-pro.
+- GraphQL governance mutations confirmed on 1.7.0 via introspection (see `governance.ts` for exact shapes). `createStructuredProperty` valueType urns: `urn:li:dataType:datahub.number|string`; entityTypes `urn:li:entityType:datahub.dataset`.
+- tsx one-offs: put temp scripts inside `agent/src/` (module resolution) and use file scripts, not `tsx -e` (no top-level await in cjs eval).
+- Playwright innerText checks race React + CSS `text-transform: uppercase` changes innerText case — verify modals via screenshot or querySelector, not text search.
+- npm workspace scripts: run `node -e` package.json edits from inside the right workspace dir (a stray run polluted convex/package.json once; reverted).
 
 ## Standing decisions (do not reopen)
 
-Source read-only; steward writes only to liner-notes. No audio features. Scope settled — new ideas → Linear comments. `_build_plan/` never imported by code. SonoVault+Deezer > song.link. 414music-only = no external enrichment. DataHub on Linode via tunnel for Tarik; local quickstart is the judge story. Assertions on rm-playlist-v2.plays with stable URNs. Dark music-city theme; bridge threshold 0.5; editorial receipts layout already shipped.
+Everything from before, plus: editorial = Perplexity-only (5-domain registry, no scraping); bridge threshold 0.5; GMS via 18080; incident thresholds honest (no faked resolutions); MOO-475 scope was Tarik-directed. Milestone log for M5 still to be written at close of MOO-474 (`_build_plan/milestones/5-editorial-live-ship/milestone-log.md`).
