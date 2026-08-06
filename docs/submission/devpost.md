@@ -77,9 +77,10 @@ README with architecture diagram and copy-paste judge path; sample outputs in
 `docs/samples/` (real run reports, the narrated editorial session log, a
 generated playlist with per-track receipts, DataHub screenshots).
 
-**Open source (bonus).** The whole project is Apache 2.0, and the Convex
-connector is submitted upstream to `datahub-project/datahub` as a draft PR:
-[link — fill in]. It registers via the standard plugin entry point and runs
+**Open source (bonus).** The whole project is Apache 2.0. The Convex connector
+is submitted upstream to `datahub-project/datahub` as a draft PR
+([link — fill in]) and published as a standalone pip-installable repo:
+https://github.com/tmoody1973/datahub-convex. It registers via the standard plugin entry point and runs
 against a stock quickstart.
 
 ## How we built it

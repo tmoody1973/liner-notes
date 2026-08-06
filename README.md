@@ -123,7 +123,7 @@ npm run verify:source
 
 | Directory | What it is |
 |---|---|
-| `connector/` | Convex → DataHub ingestion source (Python) — [its README](./connector/README.md) has the recipe format and tests |
+| `connector/` | Convex → DataHub ingestion source (Python) — [its README](./connector/README.md) has the recipe format and tests; also published standalone at [tmoody1973/datahub-convex](https://github.com/tmoody1973/datahub-convex) |
 | `agent/` | Steward agent + graph builder + editorial/events/governance jobs (TypeScript) |
 | `convex/` | Liner Notes deployment: schema, judge-mode seed |
 | `web/` | Discovery app (Next.js) |
