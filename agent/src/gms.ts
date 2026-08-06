@@ -50,6 +50,7 @@ export interface AssertionOutcome {
 // dataset. Thresholds are deliberate: coverage starts red on a fresh backlog
 // and turns green as sessions drain it — that movement is the story.
 const RESOLUTION_COVERAGE_THRESHOLD = 0.5;
+const RESOLUTION_TARGET_THRESHOLD = 0.8; // aspirational — red until review triage
 const ENRICHMENT_COVERAGE_THRESHOLD = 0.8;
 
 interface AssertionSpec {
@@ -78,6 +79,20 @@ function assertionSpecs(stats: StewardStats): AssertionSpec[] {
         totalWorkItems: String(workItems.total),
         coveragePct: (coverage * 100).toFixed(1),
         thresholdPct: String(RESOLUTION_COVERAGE_THRESHOLD * 100),
+      },
+    },
+    {
+      id: "liner-notes-resolution-target",
+      type: "Resolution coverage target",
+      description:
+        `Aspirational target: ${RESOLUTION_TARGET_THRESHOLD * 100}% of distinct raw artist strings ` +
+        `resolved. Failing this raises a steward incident tracking the remaining human-review backlog.`,
+      pass: coverage >= RESOLUTION_TARGET_THRESHOLD,
+      properties: {
+        resolvedWorkItems: String(resolved),
+        totalWorkItems: String(workItems.total),
+        coveragePct: (coverage * 100).toFixed(1),
+        thresholdPct: String(RESOLUTION_TARGET_THRESHOLD * 100),
       },
     },
     {
@@ -114,7 +129,9 @@ export class DataHubGms {
     this.token = process.env.DATAHUB_GMS_TOKEN;
   }
 
-  private async graphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  // Public: governance.ts (M5) drives domains/glossary/tags/incidents
+  // through the same client.
+  async graphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
     const response = await fetch(`${this.gmsUrl}/api/graphql`, {
       method: "POST",
       headers: {

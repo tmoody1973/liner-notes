@@ -12,7 +12,8 @@
     "graph:verify": "tsx src/graph/verify.ts",
     "backfill:links": "tsx src/backfill-links.ts",
     "editorial": "tsx src/editorial.ts",
-    "sync:events": "tsx src/sync-events.ts"
+    "sync:events": "tsx src/sync-events.ts",
+    "governance": "tsx src/governance.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",

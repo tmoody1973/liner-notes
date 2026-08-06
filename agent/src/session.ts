@@ -5,6 +5,7 @@ import { LinerNotesClient } from "./convex.js";
 import { DataHubMcp, summarizeAssertions } from "./datahub.js";
 import { enrichOne } from "./enrich.js";
 import { DataHubGms, datasetUrn } from "./gms.js";
+import { syncIncidents } from "./governance.js";
 import { phaseBanner, say } from "./narrate.js";
 import { writeReport } from "./report.js";
 import { resolveItem, type ScoredCandidate } from "./resolve.js";
@@ -265,6 +266,7 @@ export async function runSession(
     for (const o of outcomes) {
       say(`  assertion ${o.pass ? "PASS" : "FAIL"} · ${o.label} (${o.detail})`);
     }
+    await syncIncidents(gms, playsUrn, outcomes);
     await gms.upsertLineage(playsUrn, resolvedUrns);
     say(`  lineage upserted: ${SOURCE_PLAYS_DATASET} → artists, tracks, workItems`);
     const documented = await gms.writeDocumentation(report, runId);
