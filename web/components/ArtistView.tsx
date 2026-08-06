@@ -148,6 +148,13 @@ export function ArtistView({ artistId }: { artistId: string }) {
               />
               MusicBrainz
             </span>
+            <span className="flex items-center gap-1">
+              <span
+                className="inline-block h-0.5 w-4 rounded"
+                style={{ background: EDGE_COLORS.editorial }}
+              />
+              editorial
+            </span>
           </span>
         </div>
         <div className="relative flex-1">
