@@ -139,21 +139,21 @@ export function ArtistView({ artistId }: { artistId: string }) {
                 className="inline-block h-0.5 w-4 rounded"
                 style={{ background: EDGE_COLORS.curation }}
               />
-              co-play
+              back-to-back on air
             </span>
             <span className="flex items-center gap-1">
               <span
                 className="inline-block h-0.5 w-4 rounded"
                 style={{ background: EDGE_COLORS.canonical }}
               />
-              MusicBrainz
+              real-world credits
             </span>
             <span className="flex items-center gap-1">
               <span
                 className="inline-block h-0.5 w-4 rounded"
                 style={{ background: EDGE_COLORS.editorial }}
               />
-              editorial
+              music press
             </span>
           </span>
         </div>

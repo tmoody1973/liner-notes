@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { SearchBox } from "@/components/SearchBox";
 import { LiveSoonBadge, useLiveSoonIds } from "@/components/LiveSoon";
-import { hoodColor } from "@/lib/palette";
+import { EDGE_COLORS, hoodColor } from "@/lib/palette";
 import { stationLabel } from "@/lib/stations";
 import type { ArtistLite, Neighborhood } from "@/lib/types";
 
@@ -33,17 +33,50 @@ export default function Home() {
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           The station&apos;s musical brain,
           <br />
-          <span className="bg-linear-to-r from-(--hood-0) via-(--hood-2) to-(--hood-1) bg-clip-text text-transparent">
-            made explorable.
-          </span>
+          <span style={{ color: "var(--hood-0)" }}>made explorable.</span>
         </h1>
         <p className="mx-auto mt-4 max-w-lg text-muted">
           {index
-            ? `${index.length} artists, connected by what four Radio Milwaukee stations actually played back to back — every connection with its receipt.`
-            : "Four stations' airplay, turned into an influence graph — every connection with its receipt."}
+            ? `${index.length} artists, linked by what four Radio Milwaukee stations actually played on air.`
+            : "Artists linked by what four Radio Milwaukee stations actually played on air."}{" "}
+          Search someone you love and follow the lines.
         </p>
         <div className="mt-8">
           <SearchBox autoFocus />
+        </div>
+
+        {/* How connections work — the one concept a first-time visitor needs. */}
+        <div className="mx-auto mt-6 max-w-lg text-left text-sm text-muted">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.16em]">
+            Every line between two artists is earned
+          </p>
+          <ul className="mt-3 space-y-1.5">
+            <li className="flex items-center gap-2.5">
+              <span
+                className="inline-block h-0.5 w-5 shrink-0 rounded"
+                style={{ background: EDGE_COLORS.curation }}
+              />
+              A DJ played them back-to-back on air — again and again
+            </li>
+            <li className="flex items-center gap-2.5">
+              <span
+                className="inline-block h-0.5 w-5 shrink-0 rounded"
+                style={{ background: EDGE_COLORS.canonical }}
+              />
+              Real-world credits — bandmates, collaborators, remixes
+            </li>
+            <li className="flex items-center gap-2.5">
+              <span
+                className="inline-block h-0.5 w-5 shrink-0 rounded"
+                style={{ background: EDGE_COLORS.editorial }}
+              />
+              Music journalism — a quote from a cited review or interview
+            </li>
+          </ul>
+          <p className="mt-3 text-center text-xs">
+            Tap any line to see its receipt: what connects them, and how we
+            know.
+          </p>
         </div>
       </section>
 
