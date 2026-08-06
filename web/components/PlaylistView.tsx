@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PreviewButton } from "@/components/PreviewButton";
+import { previewSrc } from "@/lib/preview";
 import { LiveSoonBadge, useLiveSoonIds } from "@/components/LiveSoon";
 import { StreamingButtons } from "@/components/StreamingButtons";
 
@@ -158,7 +159,9 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
                   <LiveSoonBadge show={liveSoon.has(track.artistId)} />
                 </p>
               </div>
-              {track.previewUrl && <PreviewButton url={track.previewUrl} />}
+              {previewSrc(track.previewUrl, track.streamingLinks) && (
+                <PreviewButton url={previewSrc(track.previewUrl, track.streamingLinks)!} />
+              )}
             </div>
             <div className="mt-2 border-t border-edge pt-2">
               <StreamingButtons

@@ -8,6 +8,7 @@ import { useCallback, useMemo, useState } from "react";
 import { GraphExplorer } from "@/components/GraphExplorer";
 import { EventCard, LiveSoonBadge, useLiveSoonIds } from "@/components/LiveSoon";
 import { PreviewButton } from "@/components/PreviewButton";
+import { previewSrc } from "@/lib/preview";
 import { ReceiptSheet } from "@/components/ReceiptSheet";
 import { StreamingButtons } from "@/components/StreamingButtons";
 import { TrustChip } from "@/components/TrustChip";
@@ -292,12 +293,14 @@ export function ArtistView({ artistId }: { artistId: string }) {
               {panel.tracks.map((t) => (
                 <li key={t.id} className="space-y-1.5">
                   <div className="flex items-center gap-3">
-                    {t.previewUrl && <PreviewButton url={t.previewUrl} />}
+                    {previewSrc(t.previewUrl, t.streamingLinks) && (
+                      <PreviewButton url={previewSrc(t.previewUrl, t.streamingLinks)!} />
+                    )}
                     <div className="min-w-0">
                       <p className="truncate font-medium">{t.title}</p>
                       <p className="text-xs text-muted">
                         {t.releaseYear ?? ""}
-                        {t.previewUrl ? " · 30s preview" : ""}
+                        {previewSrc(t.previewUrl, t.streamingLinks) ? " · 30s preview" : ""}
                       </p>
                     </div>
                   </div>
