@@ -2,6 +2,8 @@
 
 **Track:** 1 — Agents That Do Real Work
 **Repo:** https://github.com/tmoody1973/liner-notes (Apache 2.0)
+**Live app:** https://liner-notes-pi.vercel.app
+**Standalone connector:** https://github.com/tmoody1973/datahub-convex
 **Video:** [YouTube link — fill in after upload]
 **Team:** Tarik Moody (Radio Milwaukee)
 

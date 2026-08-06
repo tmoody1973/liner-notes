@@ -4,6 +4,8 @@
 
 **Remaining (in order):** (1) open the draft PR — `gh pr create --repo datahub-project/datahub --base master --head tmoody1973:feat/convex-ingestion-source --title "feat(ingestion): add Convex metadata ingestion source" --body-file docs/submission/upstream-pr-body.md --draft`` (was permission-blocked for the agent; Tarik can run it with `!`); (2) attach PR link to MOO-474 + fill the two `[link — fill in]` slots in devpost.md; (3) YouTube upload (PUBLIC) + Devpost form; (4) mark MOO-474 Done with screenshots. Voice history: pro clone `k50RwPmT87kNceJVrJG6` Creator-tier-gated → instant clone "Tarik 2" had garbled speech → now "Jarnathan" (`c6SfcYrb2t09NHXiT80T`, Tarik-supplied) at speed 1.1; script tightened ~18% and typographic scenes retimed so the slower narrator fits under 3:00. All 8 segments Whisper-transcribed clean against the script. Deadline **Aug 10, 2026 5pm EDT**.
 
+**Also live now:** web app deployed to Vercel — **https://liner-notes-pi.vercel.app** (project `liner-notes`, team tmoody1973s-projects; deployment protection disabled via API so judges can view; `/review` 404s on Vercel by design via `web/app/review/layout.tsx`). Standalone connector repo: **https://github.com/tmoody1973/datahub-convex** (subtree split with history + plain-English README).
+
 **Watch-outs added this session:** OpenSearch on the VM OOM-dies under ingest load → `ssh root@172.236.98.82 'docker start datahub-opensearch-1'`; judge/clean-clone steward sessions WRITE to whatever GMS they point at (no namespace guard) — restore honest state with `npm run steward -- --mode=real` before capturing DataHub evidence; `videos/` and `connector/recipes/convex.local.yml` are gitignored on purpose.
 
 ## Cold-start (first 5 minutes of the next session)
