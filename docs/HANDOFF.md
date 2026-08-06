@@ -1,6 +1,27 @@
 # Handoff — Liner Notes (DataHub Agent Hackathon) → next: finish MOO-474 (submission package)
 
-**Updated 2026-08-05 ~19:05 CDT.** M1–M4 complete; M5 features complete: **MOO-472 (editorial edges), MOO-473 (see-them-live), MOO-475 (DataHub governance surface) all Done** with evidence + attachments. **MOO-474 (submission package) is In Progress** — public repo pushed, everything else remains. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1).
+**Updated 2026-08-05 ~19:10 CDT.** M1–M4 complete; M5 features complete: **MOO-472 (editorial edges), MOO-473 (see-them-live), MOO-475 (DataHub governance surface) all Done** with evidence + attachments. **MOO-474 (submission package) is In Progress** — public repo pushed, everything else remains. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1). Tarik manages deadline pressure; do the job properly.
+
+## Cold-start (first 5 minutes of the next session)
+
+1. Kickoff was "read docs/HANDOFF.md and continue" — the workflow is `linear-build:linear-build` (issue → In Progress → build → verify vs real data → Done + evidence comment). MOO-474 is already In Progress; no plan-mode gate needed (Tarik approved the M5 plan incl. the video approach; his three locked calls: sonar-pro/50, **I produce the video with HyperFrames + ElevenLabs VO**, public repo now).
+2. Verify the estate before building: `git status` (clean, origin=github.com/tmoody1973/liner-notes, pushed through 54f90ec); web dev server on **localhost:3000** (long-running — check before starting another); Convex `dev:dusty-crocodile-663`; GMS tunnel alive? → `curl -s http://localhost:18080/api/graphql -X POST -H 'Content-Type: application/json' -d '{"query":"{ __typename }"}'` (rerun the ssh line below if dead); DataHub UI localhost:9002 (datahub/datahub — Playwright Chrome already logged in).
+3. For the video: **invoke the `hyperframes` skill BEFORE anything video-related** (it's the mandatory entry point and owns the workflow); `elevenlabs-tts` for the voiceover.
+
+## Demo entities (stable IDs used across evidence — reuse for footage)
+
+| Thing | ID / URL |
+|---|---|
+| Erykah Badu (explorer/star of M4 evidence) | `/artist/j576x206tcqtnf2n1shktf0ayd8bx39r` |
+| Madlib (editorial blue edges + receipt sheet) | `/artist/j5714fzx84fbs8xsnzw7avs9y98bwp5g` |
+| Sylvan Esso (event card + live-soon) | `/artist/j579dfqt5ngt7ct2j74bbpjvyh8bx66t` |
+| Twan Mack (top bridge, cross-the-bridge) | `/artist/j577qxpawr7s50g6w6bkqtcrah8bxfta` |
+| Ear-test playlist (stable URL) | `/playlist/k973pjytk1870q7gw2x9p7qxjh8bxqnf` |
+| Path demo | Pathfinder: Erykah Badu → Holy Pinto (4 hops, flow ≥1347) |
+| plays dataset in DataHub (incident/quality/lineage) | `http://localhost:9002/dataset/urn%3Ali%3Adataset%3A(urn%3Ali%3AdataPlatform%3Aconvex%2Crm-playlist-v2.plays%2CPROD)/Incidents` |
+| graphEdges in DataHub (props/tags/terms/domain) | same pattern with `liner-notes.graphEdges`, `/Properties` |
+
+Footage capture notes: graph pages need ~8–20s to settle (staged auto-fit stops on user interaction); phone viewport 390×844 works; canvas taps via `page.mouse` need a hover first; check modals via screenshot (innerText races React + CSS uppercase).
 
 ## MOO-474 — what's done / what remains (in order)
 
