@@ -1,6 +1,10 @@
-# Handoff — Liner Notes (DataHub Agent Hackathon) → next: finish MOO-474 (submission package)
+# Handoff — Liner Notes (DataHub Agent Hackathon) → next: MOO-474 final mile (PR open, YouTube, Devpost)
 
-**Updated 2026-08-05 ~19:10 CDT.** M1–M4 complete; M5 features complete: **MOO-472 (editorial edges), MOO-473 (see-them-live), MOO-475 (DataHub governance surface) all Done** with evidence + attachments. **MOO-474 (submission package) is In Progress** — public repo pushed, everything else remains. Deadline **Aug 10, 2026 5pm EDT** (Devpost, Track 1). Tarik manages deadline pressure; do the job properly.
+**Updated 2026-08-05 ~20:30 CDT.** MOO-474 is ~90% done (see the evidence comment on the issue). **Done this session:** README overhaul + `docs/architecture.svg` + `docs/samples/` (commits 625367b→c3d0780); connector re-ingest verified (graphEdges 39,674); clean-clone test (`docs/evidence/m5-clean-clone.txt`, 7/9 pass, blockers fixed, incident-mutation bug fixed in `agent/src/governance.ts`); upstream port pushed to fork branch `feat/convex-ingestion-source` (PR body preserved at `docs/submission/upstream-pr-body.md`); **final video rendered: `videos/liner-notes-demo/renders/liner-notes-final-2m49s.mp4` (2:49.5, verified)**; Devpost draft `docs/submission/devpost.md`; M5 milestone log written.
+
+**Remaining (in order):** (1) open the draft PR — `gh pr create --repo datahub-project/datahub --base master --head tmoody1973:feat/convex-ingestion-source --title "feat(ingestion): add Convex metadata ingestion source" --body-file docs/submission/upstream-pr-body.md --draft`` (was permission-blocked for the agent; Tarik can run it with `!`); (2) attach PR link to MOO-474 + fill the two `[link — fill in]` slots in devpost.md; (3) YouTube upload (PUBLIC) + Devpost form; (4) mark MOO-474 Done with screenshots. Video voice = Tarik's instant clone "Tarik 2" (professional clone `k50RwPmT87kNceJVrJG6` is Creator-tier-gated; alt sample `public/vo/f01-alt-tarik1.mp3`); VO regenerate + re-render ≈ 10 min if he wants a swap. Deadline **Aug 10, 2026 5pm EDT**.
+
+**Watch-outs added this session:** OpenSearch on the VM OOM-dies under ingest load → `ssh root@172.236.98.82 'docker start datahub-opensearch-1'`; judge/clean-clone steward sessions WRITE to whatever GMS they point at (no namespace guard) — restore honest state with `npm run steward -- --mode=real` before capturing DataHub evidence; `videos/` and `connector/recipes/convex.local.yml` are gitignored on purpose.
 
 ## Cold-start (first 5 minutes of the next session)
 
