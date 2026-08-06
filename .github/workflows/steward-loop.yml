@@ -1,0 +1,60 @@
+# The steward loop, on a schedule.
+#
+# The source (rm-playlist-v2) is the station's live playlist platform — plays
+# stream in continuously — so the loop is designed to run unattended:
+#   nightly : steward session (scan next chunk → resolve → enrich → document)
+#             → refresh the web app's graph snapshot
+#   weekly  : graph rebuild (new nodes/edges/neighborhoods) — see note below
+#
+# Shipped with the cron DISABLED (manual dispatch only) during hackathon
+# judging so the demo state stays frozen; uncomment `schedule:` to go live.
+#
+# Required repo secrets (same names as .env.example):
+#   ANTHROPIC_API_KEY          — the agent's judgment calls
+#   CONVEX_URL                 — the Liner Notes deployment URL
+#   CONVEX_SOURCE_URL          — rm-playlist-v2 deployment URL
+#   CONVEX_SOURCE_DEPLOY_KEY   — read-only streaming-export key
+# Optional:
+#   DISCOGS_TOKEN, SONOVAULT_API_KEY   — richer enrichment
+#   DATAHUB_GMS_URL + network reach    — DataHub write-back. The demo GMS sits
+#     behind an SSH tunnel, so CI runs degrade gracefully (assertions/incidents
+#     are skipped and noted in the run report) unless a reachable GMS is set.
+
+name: steward-loop
+
+on:
+  workflow_dispatch:
+    inputs:
+      rebuild_graph:
+        description: "Also rebuild the influence graph (renames neighborhoods!)"
+        type: boolean
+        default: false
+  # schedule:
+  #   - cron: "17 8 * * *"   # nightly 03:17 America/Chicago — enable after judging
+
+jobs:
+  steward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CONVEX_URL: ${{ secrets.CONVEX_URL }}
+      CONVEX_SOURCE_URL: ${{ secrets.CONVEX_SOURCE_URL }}
+      CONVEX_SOURCE_DEPLOY_KEY: ${{ secrets.CONVEX_SOURCE_DEPLOY_KEY }}
+      DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+      SONOVAULT_API_KEY: ${{ secrets.SONOVAULT_API_KEY }}
+      DATAHUB_GMS_URL: ${{ secrets.DATAHUB_GMS_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: astral-sh/setup-uv@v5 # uvx mcp-server-datahub for the orient phase
+      - run: npm ci
+      - name: Steward session (scan → resolve → enrich → document)
+        run: npm run steward -- --mode=real
+      - name: Rebuild influence graph (opt-in — renames neighborhoods)
+        if: ${{ inputs.rebuild_graph }}
+        run: npm run graph
+      - name: Refresh the web app's graph snapshot
+        run: curl -sf "https://liner-notes-pi.vercel.app/api/map?refresh=1" -o /dev/null && echo "snapshot refreshed"
