@@ -82,7 +82,7 @@ generated playlist with per-track receipts, DataHub screenshots).
 
 **Open source (bonus).** The whole project is Apache 2.0. The Convex connector
 is submitted upstream to `datahub-project/datahub` as a draft PR
-([link — fill in]) and published as a standalone pip-installable repo:
+(https://github.com/datahub-project/datahub/pull/19082) and published as a standalone pip-installable repo:
 https://github.com/tmoody1973/datahub-convex. It registers via the standard plugin entry point and runs
 against a stock quickstart.
 
