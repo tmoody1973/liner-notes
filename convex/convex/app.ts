@@ -33,6 +33,45 @@ export const artistIndex = query({
   },
 });
 
+// The nightly loop's visible pulse: artists that entered the catalog in the
+// last `days` (default 7), newest first. Stations/spins come from workItems
+// because brand-new artists have no graph node until the next rebuild.
+export const newThisWeek = query({
+  args: { days: v.optional(v.number()), limit: v.optional(v.number()) },
+  handler: async (ctx, { days, limit }) => {
+    const since = Date.now() - (days ?? 7) * 24 * 60 * 60 * 1000;
+    const artists = await ctx.db.query("artists").collect();
+    const fresh = artists
+      .filter((a) => (a.resolution?.resolvedAt ?? 0) >= since)
+      .sort((a, b) => (b.resolution?.resolvedAt ?? 0) - (a.resolution?.resolvedAt ?? 0))
+      .slice(0, limit ?? 12);
+    const result = [];
+    for (const artist of fresh) {
+      const stations = new Set<string>();
+      let playCount = 0;
+      for (const raw of artist.rawNames) {
+        const item = await ctx.db
+          .query("workItems")
+          .withIndex("by_rawArtist", (q) => q.eq("rawArtist", raw))
+          .unique();
+        if (!item) continue;
+        playCount += item.playCount;
+        for (const slug of item.stationSlugs) stations.add(slug);
+      }
+      result.push({
+        artistId: artist._id,
+        displayName: artist.displayName,
+        imageUrl: artist.imageUrl,
+        genres: (artist.genres ?? []).slice(0, 2),
+        resolvedAt: artist.resolution?.resolvedAt ?? 0,
+        stations: [...stations].sort(),
+        playCount,
+      });
+    }
+    return result;
+  },
+});
+
 // Everything the artist page needs in one read: identity, enrichment,
 // resolution provenance (trust chip), airplay stats, neighborhood, tracks.
 export const artistPanel = query({
