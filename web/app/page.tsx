@@ -11,22 +11,11 @@ import { EDGE_COLORS, hoodColor } from "@/lib/palette";
 import { stationLabel } from "@/lib/stations";
 import type { ArtistLite, Neighborhood } from "@/lib/types";
 
-type NewArtist = {
-  artistId: string;
-  displayName: string;
-  imageUrl?: string;
-  genres: string[];
-  resolvedAt: number;
-  stations: string[];
-  playCount: number;
-};
-
 export default function Home() {
   const index = useQuery(anyApi.app.artistIndex) as ArtistLite[] | undefined;
   const hoods = useQuery(anyApi.app.neighborhoodList) as
     | Neighborhood[]
     | undefined;
-  const fresh = useQuery(anyApi.app.newThisWeek, {}) as NewArtist[] | undefined;
   const liveSoon = useLiveSoonIds();
 
   const featured = useMemo(
@@ -90,49 +79,6 @@ export default function Home() {
           </p>
         </div>
       </section>
-
-      {/* ── New on air this week — the nightly loop's visible pulse ── */}
-      {fresh && fresh.length > 0 && (
-        <section className="pb-10">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-              New on air this week
-            </h2>
-            <span className="text-xs text-muted">
-              added nightly from the stations&apos; airwaves
-            </span>
-          </div>
-          <div className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
-            {fresh.map((a) => (
-              <Link
-                key={a.artistId}
-                href={`/artist/${a.artistId}`}
-                className="group w-36 shrink-0 snap-start overflow-hidden rounded-2xl border border-edge bg-surface transition hover:border-[color:var(--muted)]"
-              >
-                {a.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- remote artist art, no next/image domain config
-                  <img
-                    src={a.imageUrl}
-                    alt={a.displayName}
-                    loading="lazy"
-                    className="aspect-square w-full object-cover transition group-hover:scale-[1.02]"
-                  />
-                ) : (
-                  <div className="flex aspect-square w-full items-center justify-center bg-raised text-2xl font-bold text-muted">
-                    {a.displayName.slice(0, 1)}
-                  </div>
-                )}
-                <div className="p-2.5">
-                  <p className="truncate text-sm font-medium">{a.displayName}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted">
-                    {a.playCount} spins · {a.stations.map(stationLabel).join(", ")}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* ── Neighborhoods strip ──────────────────────────────────── */}
       {hoods && hoods.length > 0 && (
