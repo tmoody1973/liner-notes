@@ -78,8 +78,24 @@ export async function runSession(
   // ── 2. DETECT ──────────────────────────────────────────────────────────
   phaseBanner("detect");
   say(`reading plays from ${mode === "real" ? "rm-playlist-v2 streaming export" : "judge-mode sample data"}...`);
-  const { plays, complete } = await readPlays(mode, linerNotes);
-  say(`${plays.length} plays scanned${complete ? "" : " (capped scan — more exist)"}`);
+  // Full-history scan by default: the snapshot read starts from the top of the
+  // table every session, so a small page cap would re-scan the oldest chunk
+  // forever and never reach yesterday's plays (found 2026-08-26, going live).
+  const maxPages = Number(process.env.STEWARD_MAX_PAGES ?? 400);
+  const { plays: allPlays, complete } = await readPlays(mode, linerNotes, { maxPages });
+  say(`${allPlays.length} plays scanned${complete ? " (full history)" : " (capped scan — more exist)"}`);
+  // Live-loop station scope (Tarik, 2026-08-26): only these stations feed new
+  // stewardship intake. Unset (judge mode, local runs) means all stations.
+  const stationScope = process.env.STEWARD_STATIONS?.split(",").map((s) => s.trim()).filter(Boolean);
+  const plays = stationScope
+    ? allPlays.filter((p) => stationScope.includes(p.stationSlug))
+    : allPlays;
+  if (stationScope) {
+    say(
+      `scoped to ${stationScope.join(", ")} — ${allPlays.length - plays.length} plays from ` +
+        `other stations excluded from stewardship intake`
+    );
+  }
   const worklist = buildWorklist(plays);
   say(`${worklist.length} distinct raw artist strings need stewardship`);
   const { created } = await linerNotes.seedWorklist(worklist);
@@ -233,7 +249,9 @@ export async function runSession(
   phaseBanner("document");
   const stats = {
     mode,
-    playsScanned: plays.length,
+    playsScanned: allPlays.length,
+    playsInScope: plays.length,
+    stationScope: stationScope?.join(",") ?? "all",
     scanComplete: complete,
     distinctArtists: worklist.length,
     newWorkItems: created,

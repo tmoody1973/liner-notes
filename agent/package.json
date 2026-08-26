@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "session": "tsx src/index.ts",
-    "check": "tsx src/resolve.selfcheck.ts && tsx src/graph/coplay.selfcheck.ts && tsx ../web/lib/traversal.selfcheck.ts",
+    "check": "tsx src/resolve.selfcheck.ts && tsx src/graph/coplay.selfcheck.ts && tsx src/graph/naming.selfcheck.ts && tsx ../web/lib/traversal.selfcheck.ts",
     "typecheck": "tsc --noEmit",
     "graph": "tsx src/graph/build.ts",
     "graph:verify": "tsx src/graph/verify.ts",

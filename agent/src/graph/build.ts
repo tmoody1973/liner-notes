@@ -8,7 +8,12 @@ import { say } from "../narrate.js";
 import { detectMode, readPlays } from "../source.js";
 import { computeCoPlayEdges, type ResolvedPlay } from "./coplay.js";
 import { graphConfig } from "./config.js";
-import { nameNeighborhoods, type NeighborhoodInput } from "./naming.js";
+import {
+  matchNeighborhoods,
+  nameNeighborhoods,
+  type NeighborhoodInput,
+  type NeighborhoodName,
+} from "./naming.js";
 
 // One-command influence graph build (M3, MOO-465/466). Full rebuild per run:
 // curation edges from co-play (Stell-R adapted to radio), canonical edges from
@@ -201,10 +206,32 @@ async function main(): Promise<void> {
       topGenres: [...genreCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([g]) => g),
     };
   });
-  say("asking Claude to name the neighborhoods (Milwaukee-flavored)...");
-  const names = await nameNeighborhoods(namingInputs);
+  // Districts keep their names across rebuilds: match new clusters to the
+  // previous neighborhoods by member overlap, and only genuinely new clusters
+  // get named. Listeners bookmark "Bronzeville Beat Loop" — it must survive.
+  const previous = await linerNotes.neighborhoodMembers();
+  const pinned = matchNeighborhoods(
+    previous,
+    realHoods.map(([, ids]) => ids)
+  );
+  const unnamedInputs = namingInputs.filter((h) => pinned[h.index] === null);
+  const keptNames = pinned.filter((p): p is NeighborhoodName => p !== null).map((p) => p.name);
+  say(
+    `${keptNames.length}/${realHoods.length} districts matched previous neighborhoods — names kept` +
+      (keptNames.length > 0 ? `: ${keptNames.join(" · ")}` : "")
+  );
+  let freshNames: NeighborhoodName[] = [];
+  if (unnamedInputs.length > 0) {
+    say(`asking Claude to name ${unnamedInputs.length} new neighborhood(s) (Milwaukee-flavored)...`);
+    freshNames = await nameNeighborhoods(unnamedInputs, { avoid: keptNames });
+  }
+  const freshByIndex = new Map(unnamedInputs.map((h, i) => [h.index, freshNames[i]]));
+  const names: NeighborhoodName[] = namingInputs.map(
+    (h) => pinned[h.index] ?? freshByIndex.get(h.index)!
+  );
   for (const [i, name] of names.entries()) {
-    say(`  #${i + 1} ${name.name} (${namingInputs[i].size} artists) — ${name.description}`);
+    const tag = pinned[i] !== null ? "kept" : "new";
+    say(`  #${i + 1} ${name.name} (${namingInputs[i].size} artists, ${tag}) — ${name.description}`);
   }
 
   // ── 5. WRITE ───────────────────────────────────────────────────────────

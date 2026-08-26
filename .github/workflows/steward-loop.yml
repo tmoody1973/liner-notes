@@ -29,8 +29,8 @@ on:
         description: "Also rebuild the influence graph (renames neighborhoods!)"
         type: boolean
         default: false
-  # schedule:
-  #   - cron: "17 8 * * *"   # nightly 03:17 America/Chicago — enable after judging
+  schedule:
+    - cron: "17 8 * * *" # nightly 03:17 America/Chicago — live since 2026-08-26
 
 jobs:
   steward:
@@ -44,6 +44,14 @@ jobs:
       DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
       SONOVAULT_API_KEY: ${{ secrets.SONOVAULT_API_KEY }}
       DATAHUB_GMS_URL: ${{ secrets.DATAHUB_GMS_URL }}
+      # Live-loop scope (Tarik, 2026-08-26): new stewardship intake comes from
+      # these stations only. 414music is direct local uploads — mostly absent
+      # from MusicBrainz, so live intake from it would just fill the review
+      # queue. Existing 414 artists stay in the catalog and graph.
+      STEWARD_STATIONS: "88nine,hyfin,rhythmlab"
+      # Snapshot reads start at the top of the table each run — the full-scan
+      # cap must cover the whole (growing) history to reach yesterday's plays.
+      STEWARD_MAX_PAGES: "400"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,7 +60,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5 # uvx mcp-server-datahub for the orient phase
       - run: npm ci
       - name: Steward session (scan → resolve → enrich → document)
-        run: npm run steward -- --mode=real
+        # 300/night fits the 45-min timeout; sessions are resumable, so any
+        # backlog beyond the cap simply drains across following nights.
+        run: npm run steward -- --mode=real --max-items=300
       - name: Rebuild influence graph (opt-in — renames neighborhoods)
         if: ${{ inputs.rebuild_graph }}
         run: npm run graph

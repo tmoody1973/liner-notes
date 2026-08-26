@@ -123,6 +123,22 @@ export const edgeBetween = query({
   },
 });
 
+// Current neighborhood membership — the graph rebuild reads this BEFORE
+// clearing, so districts keep their names across rebuilds (matched by member
+// overlap; Tarik's call 2026-08-26: never rename a neighborhood on rebuild).
+export const neighborhoodMembers = query({
+  args: {},
+  handler: async (ctx) => {
+    const hoods = await ctx.db.query("neighborhoods").collect();
+    const nodes = await ctx.db.query("graphNodes").collect();
+    return hoods.map((hood) => ({
+      name: hood.name,
+      description: hood.description,
+      artistIds: nodes.filter((n) => n.neighborhoodId === hood._id).map((n) => n.artistId),
+    }));
+  },
+});
+
 // Per-neighborhood anchor artists (top spins) — M3 eyeball verification now,
 // M4 neighborhood cards later.
 export const neighborhoodAnchors = query({

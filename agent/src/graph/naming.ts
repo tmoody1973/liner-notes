@@ -19,8 +19,51 @@ export interface NeighborhoodName {
   description: string;
 }
 
+// A district keeps its name across rebuilds when at least this share of the
+// union of old+new members is common to both (Jaccard). Clusters drift as new
+// plays arrive; a quarter overlap still clearly reads as "the same district".
+const PIN_THRESHOLD = 0.25;
+
+export interface PinnedNeighborhood {
+  name: string;
+  description?: string;
+  artistIds: string[];
+}
+
+// Greedy best-match of new clusters onto existing neighborhoods so names
+// survive rebuilds. Returns one entry per cluster: the kept {name,description}
+// or null when the cluster is genuinely new and needs a fresh name.
+export function matchNeighborhoods(
+  prev: PinnedNeighborhood[],
+  clusters: string[][]
+): (NeighborhoodName | null)[] {
+  const prevSets = prev.map((p) => new Set(p.artistIds));
+  const pairs: { cluster: number; prev: number; jaccard: number }[] = [];
+  clusters.forEach((members, ci) => {
+    prevSets.forEach((prevSet, pi) => {
+      const overlap = members.filter((id) => prevSet.has(id)).length;
+      const union = prevSet.size + members.length - overlap;
+      const jaccard = union > 0 ? overlap / union : 0;
+      if (jaccard >= PIN_THRESHOLD) pairs.push({ cluster: ci, prev: pi, jaccard });
+    });
+  });
+  pairs.sort((a, b) => b.jaccard - a.jaccard);
+  const result: (NeighborhoodName | null)[] = clusters.map(() => null);
+  const usedPrev = new Set<number>();
+  for (const pair of pairs) {
+    if (result[pair.cluster] !== null || usedPrev.has(pair.prev)) continue;
+    usedPrev.add(pair.prev);
+    result[pair.cluster] = {
+      name: prev[pair.prev].name,
+      description: prev[pair.prev].description ?? "",
+    };
+  }
+  return result;
+}
+
 export async function nameNeighborhoods(
-  hoods: NeighborhoodInput[]
+  hoods: NeighborhoodInput[],
+  { avoid = [] }: { avoid?: string[] } = {}
 ): Promise<NeighborhoodName[]> {
   const fallback = hoods.map(deterministicName);
   if (hoods.length === 0 || !process.env.ANTHROPIC_API_KEY) return fallback;
@@ -40,6 +83,9 @@ export async function nameNeighborhoods(
         {
           role: "user",
           content:
+            (avoid.length > 0
+              ? `These district names already exist and must NOT be reused: ${avoid.join(", ")}.\n`
+              : "") +
             "Name each neighborhood (respond for every index):\n" +
             hoods
               .map(

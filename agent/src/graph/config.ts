@@ -9,8 +9,9 @@ export const graphConfig = {
   windowMs: 60 * 60 * 1000,
   // Curation edges below this co-play count are noise, not curation.
   minCurationWeight: 2,
-  // Full play scan: 200 pages ≈ 205k plays covers the whole 166k backlog.
-  maxPages: 200,
+  // Full play scan: 400 pages ≈ 410k plays — headroom over the ~190k history
+  // (growing ~1.6k plays/day) so "full history" stays true for months.
+  maxPages: 400,
   // Convex mutation chunk size for graph inserts.
   insertChunk: 400,
 };

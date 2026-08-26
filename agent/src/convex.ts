@@ -163,6 +163,10 @@ export class LinerNotesClient {
     return this.client.mutation(anyApi.graph.insertNeighborhoods, { items });
   }
 
+  neighborhoodMembers(): Promise<{ name: string; description?: string; artistIds: string[] }[]> {
+    return this.client.query(anyApi.graph.neighborhoodMembers, {});
+  }
+
   insertNodes(
     items: {
       artistId: string;
